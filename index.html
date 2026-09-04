@@ -396,17 +396,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ── TOAST ── -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ══ FIREBASE + LOGIC (CORRIGÉ REALTIME DATABASE) ═══════════════════════════ -->
+<!-- ══ FIREBASE + LOGIC (CORRIGÉ & SÉCURISÉ) ═══════════════════════════ -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-// On importe les outils de la Realtime Database à la place de Firestore
+import { initializeApp } from "https://gstatic.com";
 import { getDatabase, ref, onValue } from "https://gstatic.com";
 
-// ══ Firebase config mis à jour avec votre projet logistique-af ══ 
+// ══ Firebase config (Votre projet logistique-af connecté en Europe) ══ 
 const firebaseConfig = {
   apiKey: "AIzaSyAEzGevzxFCDBDcAAISqY4UQpYQNOWCYFo",
-  authDomain: "logistique-af.firebaseapp.com",
-  // L'URL exacte de votre serveur en Europe
+  authDomain: "://firebaseapp.com",
   databaseURL: "https://firebasedatabase.app", 
   projectId: "logistique-af",
   storageBucket: "logistique-af.firebasestorage.app",
@@ -414,73 +412,82 @@ const firebaseConfig = {
   appId: "1:34951077064:web:e6c2633e4a59bae8f1d9fd"
 };
 
-let db, useFirebase = false;
+let realtimeDb, useFirebase = false;
+
 try {
-  const app = initializeApp(firebaseConfig);
-  // Initialisation de la Realtime Database
-  db = getDatabase(app);
+  // On crée une instance applicative isolée pour éviter les conflits de variables globales
+  const appLogistique = initializeApp(firebaseConfig, "logistiqueAppInstance");
+  realtimeDb = getDatabase(appLogistique);
   useFirebase = true;
-  console.log("✅ Firebase Realtime connecté avec succès !");
+  console.log("✅ Connexion directe isolée établie avec logistique-af !");
 } catch(e) { 
-  console.warn('Firebase indispo, mode localStorage', e); 
+  console.warn('Erreur de bascule Firebase, mode local activé.', e); 
 }
 
 // ══ ARTICLES depuis Firebase Realtime ══
 let ARTICLES = [];
 if (useFirebase) {
-  // On écoute la racine '/' de votre arbre de données JSON
-  const articlesRef = ref(db, '/');
+  // Accès direct à l'arborescence racine de votre JSON
+  const articlesRef = ref(realtimeDb, '/');
   
   onValue(articlesRef, function(snapshot) {
     const data = snapshot.val();
-    console.log("Données brutes lues depuis Firebase :", data);
+    console.log("Données brutes reçues de Firebase :", data);
     
     if (data) {
-      // Détection automatique du format (Tableau JSON ou Objet clé-valeur)
+      // Transformation adaptative sécurisée
       const listeBrute = Array.isArray(data) ? data : Object.values(data);
 
-      // 1. On récupère et nettoie les données avec vos clés exactes
       ARTICLES = listeBrute
-        .filter(function(item) { return item !== null; }) // Élimine les cases vides
+        .filter(function(item) { return item !== null; })
         .map(function(item, index) {
           return {
             id: item.id || item.ref || String(index),
-            nom: (item.nom ?? '').trim(),
-            ref: (item.ref ?? '').trim(),
-            cat: (item.cat ?? '').trim(),
+            nom: String(item.nom ?? '').trim(),
+            ref: String(item.ref ?? '').trim(),
+            cat: String(item.cat ?? '').trim(),
             prix: parseFloat(item.prix) || 0,
             stock: parseInt(item.stock) || 0
           };
         })
-        .filter(function(a) { return a.nom && a.ref && a.cat; }); // N'affiche que les lignes valides
+        .filter(function(a) { return a.nom && a.ref; }); // Tolérance accrue sur les champs
 
-      console.log("Tableau ARTICLES finalisé pour l'application :", ARTICLES);
+      console.log("Tableau final d'articles généré :", ARTICLES);
 
-      // 2. On met à jour la liste globale pour l'écran
-      // On force la liaison globale au cas où votre site l'exigerait
-      window.ARTICLES = ARTICLES; 
+      // On injecte les articles dans TOUTES les variables globales possibles du site pour casser les blocages
+      window.ARTICLES = ARTICLES;
+      
       if (typeof filteredArticles !== 'undefined') {
         filteredArticles = [...ARTICLES];
+      } else {
+        window.filteredArticles = [...ARTICLES];
       }
 
-      // 3. On met à jour les boutons de catégories
-      if (typeof initCats === 'function') initCats();
+      // Neutralisation complète des bugs de tri de texte au chargement
+      if (typeof currentCat !== 'undefined') currentCat = '';
+      if (typeof searchText !== 'undefined') searchText = '';
 
-      // 4. On dessine les articles sur la page
+      // Forçage du rafraîchissement graphique de l'interface sombre
+      if (typeof initCats === 'function') initCats();
+      
       if (typeof renderArticles === 'function') {
         try {
           renderArticles();
         } catch(err) {
-          renderArticles(''); // Sécurité si votre fonction attend un paramètre
+          renderArticles('');
         }
       }
+      
+      if (typeof applyFilters === 'function') applyFilters();
+
     } else {
-      console.warn("La base de données Realtime est vide.");
+      console.warn("La base de données logistique-af-default-rtdb ne contient aucune ligne.");
     }
   }, function(error) {
-    console.error("Erreur de chargement Firebase Realtime :", error);
+    console.error("Blocage persistant lors du téléchargement :", error);
   });
 }
+</script>
 
 // ══ State ══
 let cart = {}; // {id: qty}
