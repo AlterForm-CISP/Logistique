@@ -427,15 +427,14 @@ let ARTICLES = [];
 
 // ═══ SYNC FIREBASE REALTIME ═══
 if (useFirebase) {
-  // On pointe bien vers la racine '/' comme sur votre image
   db.ref('/').on('value', function(snapshot) {
     const data = snapshot.val();
     console.log("Données brutes lues :", data);
     
     if (data) {
-      // Transformation adaptative et sécurisée du tableau
       const listeBrute = Array.isArray(data) ? data : Object.values(data);
 
+      // Traitement et nettoyage des articles
       ARTICLES = listeBrute
         .filter(function(item) { return item !== null; })
         .map(function(item, index) {
@@ -443,22 +442,32 @@ if (useFirebase) {
             id: item.id || item.ref || String(index),
             nom: String(item.nom ?? '').trim(),
             ref: String(item.ref ?? '').trim(),
-            cat: String(item.cat ?? '').trim(),
+            cat: String(item.cat ?? '').trim(), // Garde "Gros œuvre" tel quel
             prix: parseFloat(item.prix) || 0,
             stock: parseInt(item.stock) || 0
           };
         })
-        .filter(function(a) { return a.nom && a.ref && a.cat; });
+        .filter(function(a) { return a.nom && a.ref; }); // Sécurité assouplie (on exige juste un nom et une référence)
 
-      console.log("Tableau final d'articles transmis à l'interface :", ARTICLES);
+      console.log("Tableau final transmis :", ARTICLES);
 
-      // On met à jour les variables globales de votre application
+      // On injecte les articles dans les variables de votre application
       window.ARTICLES = ARTICLES;
-      filteredArticles = [...ARTICLES];
+      
+      // FORCE l'initialisation de filteredArticles avec TOUS les produits au démarrage
+      if (typeof filteredArticles !== 'undefined') {
+        filteredArticles = [...ARTICLES];
+      } else {
+        window.filteredArticles = [...ARTICLES];
+      }
 
-      // On force le rafraîchissement visuel de votre écran sombre
+      // Réinitialise la catégorie courante sur vide pour éviter un conflit de filtre au premier chargement
+      if (typeof currentCat !== 'undefined') currentCat = '';
+
+      // Rafraîchissement graphique de l'écran
       if (typeof initCats === 'function') initCats();
       if (typeof renderArticles === 'function') renderArticles();
+      
     } else {
       console.warn("La base de données renvoie une valeur vide.");
     }
@@ -466,7 +475,6 @@ if (useFirebase) {
     console.error("Erreur d'accès Realtime Database :", error);
   });
 }
-
 
 // ══ State ══
 let cart = {}; // {id: qty}
