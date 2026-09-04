@@ -396,95 +396,83 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ── TOAST ── -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ══ FIREBASE + LOGIC (CORRIGÉ & SÉCURISÉ) ═══════════════════════════ -->
+<!-- ══ FIREBASE + LOGIC (ACCÈS CATALOGUE FIRESTORE) ═══════════════════════════ -->
 <script type="module">
 import { initializeApp } from "https://gstatic.com";
-import { getDatabase, ref, onValue } from "https://gstatic.com";
+// On utilise getFirestore et les outils d'écoute Firestore
+import { getFirestore, collection, onSnapshot } from "https://gstatic.com";
 
-// ══ Firebase config (Votre projet logistique-af connecté en Europe) ══ 
+// ══ Firebase config (Connecté à votre projet logistique-af) ══
 const firebaseConfig = {
   apiKey: "AIzaSyAEzGevzxFCDBDcAAISqY4UQpYQNOWCYFo",
   authDomain: "://firebaseapp.com",
-  databaseURL: "https://firebasedatabase.app", 
   projectId: "logistique-af",
   storageBucket: "logistique-af.firebasestorage.app",
   messagingSenderId: "34951077064",
   appId: "1:34951077064:web:e6c2633e4a59bae8f1d9fd"
 };
 
-let realtimeDb, useFirebase = false;
-
+let db, useFirebase = false;
 try {
-  // On crée une instance applicative isolée pour éviter les conflits de variables globales
-  const appLogistique = initializeApp(firebaseConfig, "logistiqueAppInstance");
-  realtimeDb = getDatabase(appLogistique);
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
   useFirebase = true;
-  console.log("✅ Connexion directe isolée établie avec logistique-af !");
+  console.log("✅ Espace Employé connecté avec succès au catalogue Firestore !");
 } catch(e) { 
-  console.warn('Erreur de bascule Firebase, mode local activé.', e); 
+  console.warn('Firebase indispo, mode localStorage fallback', e); 
 }
 
-// ══ ARTICLES depuis Firebase Realtime ══
+// ══ ARTICLES depuis Cloud Firestore ══
 let ARTICLES = [];
 if (useFirebase) {
-  // Accès direct à l'arborescence racine de votre JSON
-  const articlesRef = ref(realtimeDb, '/');
-  
-  onValue(articlesRef, function(snapshot) {
-    const data = snapshot.val();
-    console.log("Données brutes reçues de Firebase :", data);
+  // On écoute en temps réel la collection 'articles' où le superviseur a injecté le JSON
+  onSnapshot(collection(db, 'articles'), function(snapshot) {
+    console.log("Mise à jour du catalogue reçue depuis Firestore...");
     
-    if (data) {
-      // Transformation adaptative sécurisée
-      const listeBrute = Array.isArray(data) ? data : Object.values(data);
+    // 1. Extraction et nettoyage strict des données de vos 77 articles
+    ARTICLES = snapshot.docs.map(function(doc) {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        nom: String(data.nom ?? '').trim(),
+        ref: String(data.ref ?? '').trim(),
+        cat: String(data.cat ?? '').trim(),
+        prix: parseFloat(data.prix) || 0,
+        stock: parseInt(data.stock) || 0
+      };
+    }).filter(function(a) { return a.nom && a.ref; }); // Tolérance pour afficher tous les articles valides
 
-      ARTICLES = listeBrute
-        .filter(function(item) { return item !== null; })
-        .map(function(item, index) {
-          return {
-            id: item.id || item.ref || String(index),
-            nom: String(item.nom ?? '').trim(),
-            ref: String(item.ref ?? '').trim(),
-            cat: String(item.cat ?? '').trim(),
-            prix: parseFloat(item.prix) || 0,
-            stock: parseInt(item.stock) || 0
-          };
-        })
-        .filter(function(a) { return a.nom && a.ref; }); // Tolérance accrue sur les champs
+    console.log("Catalogue prêt pour l'Espace Employé :", ARTICLES);
 
-      console.log("Tableau final d'articles généré :", ARTICLES);
-
-      // On injecte les articles dans TOUTES les variables globales possibles du site pour casser les blocages
-      window.ARTICLES = ARTICLES;
-      
-      if (typeof filteredArticles !== 'undefined') {
-        filteredArticles = [...ARTICLES];
-      } else {
-        window.filteredArticles = [...ARTICLES];
-      }
-
-      // Neutralisation complète des bugs de tri de texte au chargement
-      if (typeof currentCat !== 'undefined') currentCat = '';
-      if (typeof searchText !== 'undefined') searchText = '';
-
-      // Forçage du rafraîchissement graphique de l'interface sombre
-      if (typeof initCats === 'function') initCats();
-      
-      if (typeof renderArticles === 'function') {
-        try {
-          renderArticles();
-        } catch(err) {
-          renderArticles('');
-        }
-      }
-      
-      if (typeof applyFilters === 'function') applyFilters();
-
+    // 2. Synchronisation avec les variables globales de votre site
+    window.ARTICLES = ARTICLES;
+    
+    if (typeof filteredArticles !== 'undefined') {
+      filteredArticles = [...ARTICLES];
     } else {
-      console.warn("La base de données logistique-af-default-rtdb ne contient aucune ligne.");
+      window.filteredArticles = [...ARTICLES];
     }
+
+    // 3. Neutralisation des blocages de filtres invisibles au premier démarrage
+    if (typeof currentCat !== 'undefined' && currentCat === 'Tous') {
+      currentCat = ''; 
+    }
+
+    // 4. Déclenchement automatique de vos fonctions d'affichage
+    if (typeof initCats === 'function') initCats();
+    
+    if (typeof renderArticles === 'function') {
+      try {
+        renderArticles();
+      } catch(err) {
+        renderArticles(''); // Sécurité contre le bug du filtrage 'undefined'
+      }
+    }
+
+    if (typeof applyFilters === 'function') applyFilters();
+
   }, function(error) {
-    console.error("Blocage persistant lors du téléchargement :", error);
+    console.error("Erreur de lecture du catalogue Firestore :", error);
   });
 }
 
