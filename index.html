@@ -395,15 +395,18 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ── TOAST ── -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ══ FIREBASE + LOGIC ═══════════════════════════ -->
+<!-- ══ FIREBASE + LOGIC (Version Realtime Database) ════════════════ -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+// On importe getDatabase et ref à la place de Firestore
+import { getDatabase, ref, onValue } from "https://gstatic.com";
 
 // ══ Firebase config ══ 
 const firebaseConfig = {
   apiKey: "AIzaSyAEzGevzxFCDBDcAAISqY4UQpYQNOWCYFo",
   authDomain: "wms-logistique.firebaseapp.com",
+  // Ajout obligatoire de l'URL de votre Realtime Database
+  databaseURL: "https://firebaseio.com", 
   projectId: "wms-logistique",
   storageBucket: "wms-logistique.firebasestorage.app",
   messagingSenderId: "34951077064",
@@ -413,44 +416,49 @@ const firebaseConfig = {
 let db, useFirebase = false;
 try {
   const app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
+  // Initialisation de la Realtime Database
+  db = getDatabase(app);
   useFirebase = true;
-  console.log("✅ Firebase connecté sur demande.html !");
+  console.log("✅ Firebase Realtime connecté sur demande.html !");
 } catch(e) { 
-  console.warn('Firebase indispo, mode localStorage'); 
+  console.warn('Firebase indispo, mode localStorage', e); 
 }
 
-// ══ ARTICLES depuis Firebase ══
+// ══ ARTICLES depuis Firebase Realtime ══
 let ARTICLES = [];
 if (useFirebase) {
-  // On récupère les articles sans le tri complexe pour éviter les erreurs d'index
-  onSnapshot(collection(db, 'articles'), function(snap) {
+  // On écoute la racine '/' de votre JSON en temps réel
+  const articlesRef = ref(db, '/');
+  
+  onValue(articlesRef, function(snapshot) {
+    const data = snapshot.val();
     
-    // 1. On récupère les données
-    ARTICLES = snap.docs.map(function(d) {
-  const data = d.data();
-  return Object.assign({id: d.id}, data, {
-    nom: (data.nom ?? '').trim(),
-    ref: (data.ref ?? '').trim(),
-    cat: (data.cat ?? '').trim(),
-    prix: parseFloat(data.prix) || 0,
-    stock: parseInt(data.stock) || 0
+    if (data) {
+      // Transformation de l'objet JSON en tableau d'articles
+      ARTICLES = Object.keys(data).map(function(key) {
+        const item = data[key];
+        return {
+          id: key,
+          nom: (item.nom ?? '').trim(),
+          ref: (item.ref ?? '').trim(),
+          cat: (item.cat ?? '').trim(),
+          prix: parseFloat(item.prix) || 0,
+          stock: parseInt(item.stock) || 0
+        };
+      }).filter(a => a.nom && a.ref && a.cat);
+
+      // Mises à jour de votre interface d'affichage
+      filteredArticles = [...ARTICLES];
+      if (typeof initCats === 'function') initCats();
+      if (typeof renderArticles === 'function') renderArticles();
+    } else {
+      console.warn("Aucune donnée trouvée à la racine de la base.");
+    }
+  }, function(error) {
+    console.error("Erreur de chargement Realtime Database:", error);
   });
-}).filter(a => a.nom && a.ref && a.cat);
-
-// 2. On met à jour la liste pour l'écran
-filteredArticles = [...ARTICLES];
-
-// 3. On met à jour les boutons de catégories
-if (typeof initCats === 'function') initCats();
-
-// 4. On dessine les articles sur la page
-if (typeof renderArticles === 'function') renderArticles();
-
-}, function(error) {
-  console.error("Erreur de chargement Firebase:", error);
-});
 }
+</script>
 
 // ══ State ══
 let cart = {}; // {id: qty}
