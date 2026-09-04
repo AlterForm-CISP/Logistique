@@ -396,13 +396,13 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ── TOAST ── -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ══ FIREBASE + LOGIC (ACCÈS CATALOGUE FIRESTORE) ═══════════════════════════ -->
+<!-- ══ FIREBASE + LOGIC (ACCÈS CATALOGUE FIRESTORE CORRIGÉ CORS) ═══════════════════════════ -->
 <script type="module">
+// Correction des URL : Ajout obligatoire de "www." pour éviter le blocage CORS
 import { initializeApp } from "https://gstatic.com";
-// On utilise getFirestore et les outils d'écoute Firestore
 import { getFirestore, collection, onSnapshot } from "https://gstatic.com";
 
-// ══ Firebase config (Connecté à votre projet logistique-af) ══
+// ══ Firebase config (Votre projet logistique-af) ══
 const firebaseConfig = {
   apiKey: "AIzaSyAEzGevzxFCDBDcAAISqY4UQpYQNOWCYFo",
   authDomain: "://firebaseapp.com",
@@ -425,11 +425,9 @@ try {
 // ══ ARTICLES depuis Cloud Firestore ══
 let ARTICLES = [];
 if (useFirebase) {
-  // On écoute en temps réel la collection 'articles' où le superviseur a injecté le JSON
   onSnapshot(collection(db, 'articles'), function(snapshot) {
     console.log("Mise à jour du catalogue reçue depuis Firestore...");
     
-    // 1. Extraction et nettoyage strict des données de vos 77 articles
     ARTICLES = snapshot.docs.map(function(doc) {
       const data = doc.data();
       return {
@@ -440,11 +438,10 @@ if (useFirebase) {
         prix: parseFloat(data.prix) || 0,
         stock: parseInt(data.stock) || 0
       };
-    }).filter(function(a) { return a.nom && a.ref; }); // Tolérance pour afficher tous les articles valides
+    }).filter(function(a) { return a.nom && a.ref; });
 
     console.log("Catalogue prêt pour l'Espace Employé :", ARTICLES);
 
-    // 2. Synchronisation avec les variables globales de votre site
     window.ARTICLES = ARTICLES;
     
     if (typeof filteredArticles !== 'undefined') {
@@ -453,19 +450,17 @@ if (useFirebase) {
       window.filteredArticles = [...ARTICLES];
     }
 
-    // 3. Neutralisation des blocages de filtres invisibles au premier démarrage
     if (typeof currentCat !== 'undefined' && currentCat === 'Tous') {
       currentCat = ''; 
     }
 
-    // 4. Déclenchement automatique de vos fonctions d'affichage
     if (typeof initCats === 'function') initCats();
     
     if (typeof renderArticles === 'function') {
       try {
         renderArticles();
       } catch(err) {
-        renderArticles(''); // Sécurité contre le bug du filtrage 'undefined'
+        renderArticles('');
       }
     }
 
