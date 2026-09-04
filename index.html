@@ -428,25 +428,25 @@ let ARTICLES = [];
 
 if (useFirebase) {
   // On écoute en temps réel la collection 'articles'
-  dbFirestore.collection('articles').onSnapshot(function(snapshot) {
+   dbFirestore.collection('articles').onSnapshot(function(snapshot) {
     console.log("Mise à jour du catalogue reçue depuis Firestore...");
     
-    // Extraction ultra-tolérante (Bypasse toutes les erreurs de clés ou de filtres)
+    // 1. Extraction et formatage de vos articles
     ARTICLES = snapshot.docs.map(function(doc) {
       const data = doc.data();
       return {
         id: doc.id,
-        nom: String(data.nom ?? data.name ?? 'Article sans nom').trim(),
-        ref: String(data.ref ?? data.reference ?? doc.id).trim(),
-        cat: String(data.cat ?? data.category ?? 'Général').trim(),
+        nom: String(data.nom ?? 'Article sans nom').trim(),
+        ref: String(data.ref ?? doc.id).trim(),
+        cat: String(data.cat ?? 'Général').trim(), // Récupère "Outillage à main"
         prix: parseFloat(data.prix) || 0,
         stock: parseInt(data.stock) || 0
       };
     });
 
-    console.log("Catalogue prêt pour l'Espace Employé :", ARTICLES);
+    console.log("Catalogue chargé :", ARTICLES);
 
-    // Synchronisation avec les variables globales de votre application
+    // 2. Synchronisation forcée avec l'application d'origine
     window.ARTICLES = ARTICLES;
     
     if (typeof filteredArticles !== 'undefined') {
@@ -455,23 +455,32 @@ if (useFirebase) {
       window.filteredArticles = [...ARTICLES];
     }
 
-    // Sécurité filtre catégorie au démarrage
+    // 3. CORRECTIF CRUCIAL : Désactivation des verrous de catégories au premier rendu
     if (typeof currentCat !== 'undefined') {
-      currentCat = ''; 
+      currentCat = ''; // Évite le blocage si l'application cherche le mot textuel "Tous"
+    }
+    if (typeof searchText !== 'undefined') {
+      searchText = ''; // Nettoie le champ de recherche pour éviter un conflit "undefined"
     }
 
-    // Déclenchement automatique de l'affichage de votre grille
-    if (typeof initCats === 'function') initCats();
+    // 4. Déclenchement ordonné des fonctions graphiques de votre site
+    if (typeof initCats === 'function') {
+      initCats();
+    }
     
-    if (typeof renderArticles === 'function') {
-      try {
-        renderArticles();
-      } catch(err) {
-        renderArticles('');
+    // On laisse une micro-seconde aux catégories pour s'installer avant de dessiner les cartes
+    setTimeout(function() {
+      if (typeof renderArticles === 'function') {
+        try {
+          renderArticles();
+          renderArticles('');
+        } catch(err) {
+          console.log("Erreur renderArticles interceptée, tentative applyFilters...");
+        }
       }
-    }
-
-    if (typeof applyFilters === 'function') applyFilters();
+      if (typeof applyFilters === 'function') applyFilters();
+      if (typeof filterArticles === 'function') filterArticles();
+    }, 50);
 
   }, function(error) {
     console.error("Erreur de lecture Firestore :", error);
