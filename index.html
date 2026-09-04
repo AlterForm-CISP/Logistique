@@ -752,6 +752,35 @@ document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click
   genTracking();
   goStep(0);
 })();
-</script>
+</script><script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+
+    <script>
+        // Vos clés de configuration Firebase
+        const firebaseConfig = {
+            apiKey: "VOTRE_API_KEY",
+            authDomain: "VOTRE_AUTH_DOMAIN",
+            databaseURL: "VOTRE_DATABASE_URL",
+            projectId: "VOTRE_PROJECT_ID",
+            storageBucket: "VOTRE_STORAGE_BUCKET",
+            messagingSenderId: "VOTRE_MESSAGING_SENDER_ID",
+            appId: "VOTRE_APP_ID"
+        };
+
+        // Lancer la connexion
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Récupérer et afficher vos produits logistiques
+        database.ref('/').once('value').then((snapshot) => {
+            const produits = snapshot.val();
+            console.log("Mes produits Firebase :", produits);
+            
+            // C'est ici que l'on viendra injecter les produits dans votre espace noir
+        }).catch((error) => {
+            console.error("Erreur de connexion :", error);
+        });
+    </script>
+
 </body>
 </html>
