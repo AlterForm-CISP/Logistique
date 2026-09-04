@@ -395,68 +395,75 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ── TOAST ── -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ══ FUSION SCRIPT FIREBASE UNIVERSEL ════════════════ -->
-/<script>
-if (useFirebase) {
-  db.ref('/').on('value', function(snapshot) {
-    const data = snapshot.val();
-    console.log("Données brutes lues :", data);
+<!-- ══ RECEPTION FIREBASE UNIVERSELLE (FORMAT MODULE) ════════════════ -->
+<script type="module">
+import { getDatabase, ref, onValue } from "https://gstatic.com";
+
+if (typeof window.db !== 'undefined' || typeof db !== 'undefined') {
+  try {
+    const realtimeDb = window.db || db;
+    const articlesRef = ref(realtimeDb, '/');
     
-    if (data) {
-      const listeBrute = Array.isArray(data) ? data : Object.values(data);
-
-      // 1. On extrait vos articles logistiques
-      const articlesCharges = listeBrute
-        .filter(function(item) { return item !== null; })
-        .map(function(item, index) {
-          return {
-            id: item.id || item.ref || String(index),
-            nom: String(item.nom ?? '').trim(),
-            ref: String(item.ref ?? '').trim(),
-            cat: String(item.cat ?? '').trim(),
-            prix: parseFloat(item.prix) || 0,
-            stock: parseInt(item.stock) || 0
-          };
-        })
-        .filter(function(a) { return a.nom && a.ref; });
-
-      // 2. On remplit les variables de votre site
-      if (typeof ARTICLES !== 'undefined') ARTICLES = articlesCharges;
-      window.ARTICLES = articlesCharges;
-
-      if (typeof filteredArticles !== 'undefined') {
-        filteredArticles = [...articlesCharges];
-      } else {
-        window.filteredArticles = [...articlesCharges];
-      }
-
-      // 3. Sécurité anti-bug sur les catégories
-      if (typeof currentCat !== 'undefined') {
-        currentCat = ''; 
-      }
-
-      console.log("Articles prêts pour l'affichage :", articlesCharges);
-
-      // 4. On force l'affichage sur votre écran
-      if (typeof initCats === 'function') initCats();
+    onValue(articlesRef, function(snapshot) {
+      const data = snapshot.val();
+      console.log("Données brutes reçues de Firebase :", data);
       
-      if (typeof renderArticles === 'function') {
-        try {
-          renderArticles(); 
-        } catch(e) {
-          renderArticles('');
+      if (data) {
+        const listeBrute = Array.isArray(data) ? data : Object.values(data);
+
+        const articlesCharges = listeBrute
+          .filter(function(item) { return item !== null; })
+          .map(function(item, index) {
+            return {
+              id: item.id || item.ref || String(index),
+              nom: String(item.nom ?? '').trim(),
+              ref: String(item.ref ?? '').trim(),
+              cat: String(item.cat ?? '').trim(),
+              prix: parseFloat(item.prix) || 0,
+              stock: parseInt(item.stock) || 0
+            };
+          })
+          .filter(function(a) { return a.nom && a.ref; });
+
+        console.log("Articles formatés prêts pour l'écran :", articlesCharges);
+
+        window.ARTICLES = articlesCharges;
+        if (typeof ARTICLES !== 'undefined') ARTICLES = articlesCharges;
+        
+        if (typeof filteredArticles !== 'undefined') {
+          filteredArticles = [...articlesCharges];
+        } else {
+          window.filteredArticles = [...articlesCharges];
         }
-      }
-      
-      if (typeof applyFilters === 'function') applyFilters();
 
-    } else {
-      console.warn("La base de données renvoie une valeur vide.");
-    }
-  }, function(error) {
-    console.error("Erreur d'accès Realtime Database :", error);
-  });
+        if (typeof currentCat !== 'undefined') currentCat = '';
+
+        if (typeof initCats === 'function') initCats();
+        
+        if (typeof renderArticles === 'function') {
+          try {
+            renderArticles();
+          } catch(e) {
+            renderArticles('');
+          }
+        }
+        
+        if (typeof applyFilters === 'function') applyFilters();
+
+      } else {
+        console.warn("La base logistique-af est vide ou introuvable.");
+      }
+    }, function(error) {
+      console.error("Erreur de droits ou d'accès Firebase :", error);
+    });
+
+  } catch(err) {
+    console.error("Erreur lors de la configuration du module Firebase :", err);
+  }
+} else {
+  console.warn("L'application n'a pas pu initialiser la variable de base de données 'db'.");
 }
+
   
 // ══ State ══
 let cart = {}; // {id: qty}
