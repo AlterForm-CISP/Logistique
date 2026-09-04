@@ -576,18 +576,17 @@ tr:hover td{background:rgba(255,255,255,.02);}
 <!-- Toast container -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ══ FIREBASE + LOGIC ═══════════════════════════ -->
+<!-- ══ FIREBASE + LOGIC (MIS À JOUR COMPTE PERSONNEL) ═══════════════════════════ -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ══ Firebase config ══
-// IMPORTANT: Remplacez par votre propre config Firebase !
+// ══ Firebase config (Connecté à votre projet personnel logistique-af) ══
 const firebaseConfig = {
   apiKey: "AIzaSyAEzGevzxFCDBDcAAISqY4UQpYQNOWCYFo",
-  authDomain: "wms-logistique.firebaseapp.com",
-  projectId: "wms-logistique",
-  storageBucket: "wms-logistique.firebasestorage.app",
+  authDomain: "logistique-af.firebaseapp.com",
+  projectId: "logistique-af",
+  storageBucket: "logistique-af.firebasestorage.app",
   messagingSenderId: "34951077064",
   appId: "1:34951077064:web:e6c2633e4a59bae8f1d9fd"
 };
@@ -597,9 +596,9 @@ try {
   const app = initializeApp(firebaseConfig);
   db = getFirestore(app);
   useFirebase = true;
-  console.log("✅ Firebase connecté");
+  console.log("✅ Firebase connecté avec succès sur votre compte personnel !");
 } catch(e) {
-  console.warn("⚠️ Firebase non configuré, mode localStorage");
+  console.warn("⚠️ Firebase non configuré, mode localStorage", e);
 }
 
 // ══ In-memory / localStorage fallback ══
@@ -611,7 +610,7 @@ let DATA = {
 };
 function saveLocal(key){ localStorage.setItem('wms_'+key, JSON.stringify(DATA[key])); }
 
-// ══ Articles catalogue depuis Firebase ══
+// ══ Articles catalogue depuis votre Firestore ══
 let ARTICLES = [];
 
 if (useFirebase) {
