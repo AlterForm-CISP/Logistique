@@ -429,21 +429,22 @@ let ARTICLES = [];
 
 if (useFirebase) {
   // On écoute en temps réel la collection 'articles' créée par le superviseur
-  dbFirestore.collection('articles').onSnapshot(function(snapshot) {
+ dbFirestore.collection('articles').onSnapshot(function(snapshot) {
     console.log("Mise à jour du catalogue reçue depuis Firestore...");
     
-    // Extraction et nettoyage des 77 articles
+    // Extraction ultra-tolérante des 77 articles
     ARTICLES = snapshot.docs.map(function(doc) {
       const data = doc.data();
       return {
+        // Si data.ref n'existe pas, on prend l'ID généré par Firestore pour ne pas bloquer l'article
         id: doc.id,
-        nom: String(data.nom ?? '').trim(),
-        ref: String(data.ref ?? '').trim(),
-        cat: String(data.cat ?? '').trim(),
+        nom: String(data.nom ?? data.name ?? 'Article sans nom').trim(),
+        ref: String(data.ref ?? data.reference ?? doc.id).trim(),
+        cat: String(data.cat ?? data.category ?? 'Général').trim(),
         prix: parseFloat(data.prix) || 0,
         stock: parseInt(data.stock) || 0
       };
-    }).filter(function(a) { return a.nom && a.ref; });
+    }); // Suppression du filtre strict pour forcer TOUT l'affichage au démarrage
 
     console.log("Catalogue prêt pour l'Espace Employé :", ARTICLES);
 
@@ -457,11 +458,11 @@ if (useFirebase) {
     }
 
     // Sécurité filtre catégorie au démarrage
-    if (typeof currentCat !== 'undefined' && currentCat === 'Tous') {
+    if (typeof currentCat !== 'undefined') {
       currentCat = ''; 
     }
 
-    // Déclenchement automatique de l'affichage
+    // Déclenchement automatique de l'affichage de votre grille
     if (typeof initCats === 'function') initCats();
     
     if (typeof renderArticles === 'function') {
