@@ -396,13 +396,13 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ── TOAST ── -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ══ RECEPTION FIREBASE UNIVERSELLE (FORMAT CDN COMPAT ANTI-CORS) ════════════════ -->
-<!-- Chargement sécurisé des bibliothèques globales Firebase -->
-<script src="https://gstatic.com"></script>
-<script src="https://gstatic.com"></script>
+<!-- ══ RECEPTION CATALOGUE UNIFIÉ FIRESTORE ════════════════ -->
+<script type="module">
+// Utilisation des modules officiels identiques au site superviseur
+import { initializeApp } from "https://gstatic.com";
+import { getFirestore, collection, onSnapshot } from "https://gstatic.com";
 
-<script>
-// 1. Initialisation de votre projet logistique-af
+// Votre configuration personnelle logistique-af
 const firebaseConfig = {
   apiKey: "AIzaSyAEzGevzxFCDBDcAAISqY4UQpYQNOWCYFo",
   authDomain: "://firebaseapp.com",
@@ -412,31 +412,28 @@ const firebaseConfig = {
   appId: "1:34951077064:web:e6c2633e4a59bae8f1d9fd"
 };
 
-let dbFirestore, useFirebase = false;
+let db, useFirebase = false;
 
 try {
-  // Initialisation au format CDN global stable
-  firebase.initializeApp(firebaseConfig);
-  dbFirestore = firebase.firestore();
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
   useFirebase = true;
-  console.log("✅ Connexion stable Firestore établie sans erreur CORS !");
-} catch(e) { 
-  console.warn("Échec d'initialisation Firebase, bascule locale.", e); 
+  console.log("✅ Espace Employé synchronisé en direct avec le Superviseur !");
+} catch(e) {
+  console.warn("Bascule locale activée.", e);
 }
 
-// 2. Écoute et traitement des données du catalogue
+// Écoute de la collection d'articles
 let ARTICLES = [];
 
 if (useFirebase) {
-  // On écoute en temps réel la collection 'articles' créée par le superviseur
- dbFirestore.collection('articles').onSnapshot(function(snapshot) {
-    console.log("Mise à jour du catalogue reçue depuis Firestore...");
+  onSnapshot(collection(db, 'articles'), function(snapshot) {
+    console.log("Données reçues de Firestore...");
     
-    // Extraction ultra-tolérante des 77 articles
+    // Extraction ultra-tolérante identique à votre JSON d'importation
     ARTICLES = snapshot.docs.map(function(doc) {
       const data = doc.data();
       return {
-        // Si data.ref n'existe pas, on prend l'ID généré par Firestore pour ne pas bloquer l'article
         id: doc.id,
         nom: String(data.nom ?? data.name ?? 'Article sans nom').trim(),
         ref: String(data.ref ?? data.reference ?? doc.id).trim(),
@@ -444,11 +441,11 @@ if (useFirebase) {
         prix: parseFloat(data.prix) || 0,
         stock: parseInt(data.stock) || 0
       };
-    }); // Suppression du filtre strict pour forcer TOUT l'affichage au démarrage
+    });
 
-    console.log("Catalogue prêt pour l'Espace Employé :", ARTICLES);
+    console.log("Catalogue mis à jour :", ARTICLES);
 
-    // Synchronisation avec les variables globales de votre application
+    // Injection dans les variables de votre interface employé
     window.ARTICLES = ARTICLES;
     
     if (typeof filteredArticles !== 'undefined') {
@@ -457,12 +454,12 @@ if (useFirebase) {
       window.filteredArticles = [...ARTICLES];
     }
 
-    // Sécurité filtre catégorie au démarrage
+    // Réinitialisation automatique du sélecteur de catégorie au démarrage
     if (typeof currentCat !== 'undefined') {
       currentCat = ''; 
     }
 
-    // Déclenchement automatique de l'affichage de votre grille
+    // Déclenchement graphique de l'affichage
     if (typeof initCats === 'function') initCats();
     
     if (typeof renderArticles === 'function') {
@@ -476,7 +473,7 @@ if (useFirebase) {
     if (typeof applyFilters === 'function') applyFilters();
 
   }, function(error) {
-    console.error("Erreur de lecture Firestore :", error);
+    console.error("Erreur d'accès à la collection Firestore :", error);
   });
 }
 
