@@ -395,17 +395,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ── TOAST ── -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ══ FIREBASE + LOGIC (Version Realtime Database) ════════════════ -->
+<!-- ══ FIREBASE + LOGIC (Version Realtime Database Finale) ════════════════ -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-// On importe getDatabase et ref à la place de Firestore
+import { initializeApp } from "https://gstatic.com";
 import { getDatabase, ref, onValue } from "https://gstatic.com";
 
 // ══ Firebase config ══ 
 const firebaseConfig = {
   apiKey: "AIzaSyAEzGevzxFCDBDcAAISqY4UQpYQNOWCYFo",
-  authDomain: "wms-logistique.firebaseapp.com",
-  // Ajout obligatoire de l'URL de votre Realtime Database
+  authDomain: "://firebaseapp.com",
   databaseURL: "https://firebaseio.com", 
   projectId: "wms-logistique",
   storageBucket: "wms-logistique.firebasestorage.app",
@@ -416,7 +414,6 @@ const firebaseConfig = {
 let db, useFirebase = false;
 try {
   const app = initializeApp(firebaseConfig);
-  // Initialisation de la Realtime Database
   db = getDatabase(app);
   useFirebase = true;
   console.log("✅ Firebase Realtime connecté sur demande.html !");
@@ -427,32 +424,43 @@ try {
 // ══ ARTICLES depuis Firebase Realtime ══
 let ARTICLES = [];
 if (useFirebase) {
-  // On écoute la racine '/' de votre JSON en temps réel
   const articlesRef = ref(db, '/');
   
   onValue(articlesRef, function(snapshot) {
     const data = snapshot.val();
+    console.log("Données brutes Firebase reçues :", data);
     
     if (data) {
-      // Transformation de l'objet JSON en tableau d'articles
-      ARTICLES = Object.keys(data).map(function(key) {
-        const item = data[key];
-        return {
-          id: key,
-          nom: (item.nom ?? '').trim(),
-          ref: (item.ref ?? '').trim(),
-          cat: (item.cat ?? '').trim(),
-          prix: parseFloat(item.prix) || 0,
-          stock: parseInt(item.stock) || 0
-        };
-      }).filter(a => a.nom && a.ref && a.cat);
+      // 1. Gestion adaptative selon le format du JSON importé
+      const listeBrute = Array.isArray(data) ? data : Object.values(data);
 
-      // Mises à jour de votre interface d'affichage
+      // 2. Nettoyage et formatage strict
+      ARTICLES = listeBrute
+        .filter(function(item) { return item !== null; })
+        .map(function(item, index) {
+          return {
+            id: item.id || item.ref || String(index),
+            nom: (item.nom ?? '').trim(),
+            ref: (item.ref ?? '').trim(),
+            cat: (item.cat ?? '').trim(),
+            prix: parseFloat(item.prix) || 0,
+            stock: parseInt(item.stock) || 0
+          };
+        })
+        .filter(function(a) { return a.nom && a.ref && a.cat; });
+
+      console.log("Tableau ARTICLES finalisé pour le site :", ARTICLES);
+
+      // 3. Synchronisation avec le reste de votre page
+      window.ARTICLES = ARTICLES; 
       filteredArticles = [...ARTICLES];
+
+      // 4. Déclenchement de vos fonctions d'affichage
       if (typeof initCats === 'function') initCats();
       if (typeof renderArticles === 'function') renderArticles();
+
     } else {
-      console.warn("Aucune donnée trouvée à la racine de la base.");
+      console.warn("La base de données Realtime est vide.");
     }
   }, function(error) {
     console.error("Erreur de chargement Realtime Database:", error);
