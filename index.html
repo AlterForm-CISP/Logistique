@@ -425,12 +425,15 @@ try {
 // 2. Synchronisation et parsing des données
 let ARTICLES = [];
 
+// ═══ SYNC FIREBASE REALTIME ═══
 if (useFirebase) {
+  // On pointe bien vers la racine '/' comme sur votre image
   db.ref('/').on('value', function(snapshot) {
     const data = snapshot.val();
     console.log("Données brutes lues :", data);
     
     if (data) {
+      // Transformation adaptative et sécurisée du tableau
       const listeBrute = Array.isArray(data) ? data : Object.values(data);
 
       ARTICLES = listeBrute
@@ -449,19 +452,18 @@ if (useFirebase) {
 
       console.log("Tableau final d'articles transmis à l'interface :", ARTICLES);
 
+      // On met à jour les variables globales de votre application
       window.ARTICLES = ARTICLES;
-      if (typeof filteredArticles !== 'undefined') {
-        filteredArticles = [...ARTICLES];
-      }
+      filteredArticles = [...ARTICLES];
 
+      // On force le rafraîchissement visuel de votre écran sombre
       if (typeof initCats === 'function') initCats();
       if (typeof renderArticles === 'function') renderArticles();
-      
     } else {
-      console.warn("Aucun produit trouvé dans votre base.");
+      console.warn("La base de données renvoie une valeur vide.");
     }
   }, function(error) {
-    console.error("Erreur d'accès à la Realtime Database :", error);
+    console.error("Erreur d'accès Realtime Database :", error);
   });
 }
 
