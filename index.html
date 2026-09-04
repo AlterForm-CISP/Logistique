@@ -434,7 +434,7 @@ if (useFirebase) {
     if (data) {
       const listeBrute = Array.isArray(data) ? data : Object.values(data);
 
-      // 1. On traite et sécurise vos articles
+      // 1. Extraction propre de vos articles
       ARTICLES = listeBrute
         .filter(function(item) { return item !== null; })
         .map(function(item, index) {
@@ -449,30 +449,27 @@ if (useFirebase) {
         })
         .filter(function(a) { return a.nom && a.ref; });
 
-      console.log("Tableau transmis :", ARTICLES);
-
-      // 2. On synchronise avec l'application
+      // 2. Synchronisation globale avec le site
       window.ARTICLES = ARTICLES;
+      filteredArticles = [...ARTICLES];
 
-      // 3. CORRECTIF DU FILTRE "TOUS" : 
-      // Si l'application a initialisé currentCat sur "Tous", on le passe en chaîne vide
-      // pour que le filtre "!currentCat" devienne vrai et affiche tout.
-      if (typeof currentCat !== 'undefined' && currentCat === 'Tous') {
+      // 3. Sécurité anti-filtrage au démarrage
+      if (typeof currentCat === 'undefined' || currentCat === 'Tous') {
         currentCat = ''; 
       }
 
-      // 4. On pré-remplit la liste filtrée avec tous les articles
-      if (typeof filteredArticles !== 'undefined') {
-        filteredArticles = [...ARTICLES];
-      }
-
-      // 5. On force l'exécution de vos fonctions d'affichage
+      // 4. Déclenchement de l'affichage
       if (typeof initCats === 'function') initCats();
-      if (typeof renderArticles === 'function') renderArticles();
       
-      // Sécurité : Si votre code utilise une fonction globale de filtrage, on la lance
+      // CORRECTIF CRUCIAL : On envoie un texte vide '' au lieu de rien du tout
+      // pour éviter que la recherche ne se bloque sur 'undefined'
+      if (typeof renderArticles === 'function') {
+        renderArticles(''); 
+      }
+      
+      // Double sécurité pour forcer le dessin de votre grille d'articles
       if (typeof applyFilters === 'function') applyFilters();
-      
+
     } else {
       console.warn("La base de données renvoie une valeur vide.");
     }
@@ -480,7 +477,6 @@ if (useFirebase) {
     console.error("Erreur d'accès Realtime Database :", error);
   });
 }
-
 // ══ State ══
 let cart = {}; // {id: qty}
 let currentStep = 0;
