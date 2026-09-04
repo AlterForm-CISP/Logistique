@@ -396,17 +396,20 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ── TOAST ── -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ══ FIREBASE + LOGIC ═══════════════════════════ -->
+<!-- ══ FIREBASE + LOGIC (CORRIGÉ REALTIME DATABASE) ═══════════════════════════ -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+// On importe les outils de la Realtime Database à la place de Firestore
+import { getDatabase, ref, onValue } from "https://gstatic.com";
 
-// ══ Firebase config ══ 
+// ══ Firebase config mis à jour avec votre projet logistique-af ══ 
 const firebaseConfig = {
   apiKey: "AIzaSyAEzGevzxFCDBDcAAISqY4UQpYQNOWCYFo",
-  authDomain: "wms-logistique.firebaseapp.com",
-  projectId: "wms-logistique",
-  storageBucket: "wms-logistique.firebasestorage.app",
+  authDomain: "logistique-af.firebaseapp.com",
+  // L'URL exacte de votre serveur en Europe
+  databaseURL: "https://firebasedatabase.app", 
+  projectId: "logistique-af",
+  storageBucket: "logistique-af.firebasestorage.app",
   messagingSenderId: "34951077064",
   appId: "1:34951077064:web:e6c2633e4a59bae8f1d9fd"
 };
@@ -414,43 +417,69 @@ const firebaseConfig = {
 let db, useFirebase = false;
 try {
   const app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
+  // Initialisation de la Realtime Database
+  db = getDatabase(app);
   useFirebase = true;
-  console.log("✅ Firebase connecté sur demande.html !");
+  console.log("✅ Firebase Realtime connecté avec succès !");
 } catch(e) { 
-  console.warn('Firebase indispo, mode localStorage'); 
+  console.warn('Firebase indispo, mode localStorage', e); 
 }
 
-// ══ ARTICLES depuis Firebase ══
+// ══ ARTICLES depuis Firebase Realtime ══
 let ARTICLES = [];
 if (useFirebase) {
-  // On récupère les articles sans le tri complexe pour éviter les erreurs d'index
-  onSnapshot(collection(db, 'articles'), function(snap) {
+  // On écoute la racine '/' de votre arbre de données JSON
+  const articlesRef = ref(db, '/');
+  
+  onValue(articlesRef, function(snapshot) {
+    const data = snapshot.val();
+    console.log("Données brutes lues depuis Firebase :", data);
     
-    // 1. On récupère les données
-    ARTICLES = snap.docs.map(function(d) {
-  const data = d.data();
-  return Object.assign({id: d.id}, data, {
-    nom: (data.nom ?? '').trim(),
-    ref: (data.ref ?? '').trim(),
-    cat: (data.cat ?? '').trim(),
-    prix: parseFloat(data.prix) || 0,
-    stock: parseInt(data.stock) || 0
+    if (data) {
+      // Détection automatique du format (Tableau JSON ou Objet clé-valeur)
+      const listeBrute = Array.isArray(data) ? data : Object.values(data);
+
+      // 1. On récupère et nettoie les données avec vos clés exactes
+      ARTICLES = listeBrute
+        .filter(function(item) { return item !== null; }) // Élimine les cases vides
+        .map(function(item, index) {
+          return {
+            id: item.id || item.ref || String(index),
+            nom: (item.nom ?? '').trim(),
+            ref: (item.ref ?? '').trim(),
+            cat: (item.cat ?? '').trim(),
+            prix: parseFloat(item.prix) || 0,
+            stock: parseInt(item.stock) || 0
+          };
+        })
+        .filter(function(a) { return a.nom && a.ref && a.cat; }); // N'affiche que les lignes valides
+
+      console.log("Tableau ARTICLES finalisé pour l'application :", ARTICLES);
+
+      // 2. On met à jour la liste globale pour l'écran
+      // On force la liaison globale au cas où votre site l'exigerait
+      window.ARTICLES = ARTICLES; 
+      if (typeof filteredArticles !== 'undefined') {
+        filteredArticles = [...ARTICLES];
+      }
+
+      // 3. On met à jour les boutons de catégories
+      if (typeof initCats === 'function') initCats();
+
+      // 4. On dessine les articles sur la page
+      if (typeof renderArticles === 'function') {
+        try {
+          renderArticles();
+        } catch(err) {
+          renderArticles(''); // Sécurité si votre fonction attend un paramètre
+        }
+      }
+    } else {
+      console.warn("La base de données Realtime est vide.");
+    }
+  }, function(error) {
+    console.error("Erreur de chargement Firebase Realtime :", error);
   });
-}).filter(a => a.nom && a.ref && a.cat);
-
-// 2. On met à jour la liste pour l'écran
-filteredArticles = [...ARTICLES];
-
-// 3. On met à jour les boutons de catégories
-if (typeof initCats === 'function') initCats();
-
-// 4. On dessine les articles sur la page
-if (typeof renderArticles === 'function') renderArticles();
-
-}, function(error) {
-  console.error("Erreur de chargement Firebase:", error);
-});
 }
 
 // ══ State ══
