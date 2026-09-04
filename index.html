@@ -395,75 +395,80 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ── TOAST ── -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ══ FIREBASE + LOGIC (Version Realtime Database Finale) ════════════════ -->
-<script type="module">
-import { initializeApp } from "https://gstatic.com";
-import { getDatabase, ref, onValue } from "https://gstatic.com";
+!-- ══ FIREBASE REALTIME STABLE INTERFACE (CDN COMPAT) ════════════════ -->
+<!-- Chargement sécurisé des bibliothèques globales Firebase -->
+<script src="https://gstatic.com"></script>
+<script src="https://gstatic.com"></script>
 
-// ══ Firebase config ══ 
+<script>
+// 1. Initialisation de votre projet logistique-af
 const firebaseConfig = {
-  apiKey: "AIzaSyAEzGevzxFCDBDcAAISqY4UQpYQNOWCYFo", // Gardez votre clé actuelle
-  authDomain: "logistique-af.firebaseapp.com",
-  databaseURL: "https://logistique-af-default-rtdb.europe-west1.firebasedatabase.app", 
+  apiKey: "AIzaSyAEzGevzxFCDBDcAAISqY4UQpYQNOWCYFo",
+  authDomain: "://firebaseapp.com",
+  databaseURL: "https://firebasedatabase.app", 
   projectId: "logistique-af",
   storageBucket: "logistique-af.firebasestorage.app",
-  messagingSenderId: "34951077064", // Gardez votre ID actuel
-  appId: "1:34951077064:web:e6c2633e4a59bae8f1d9fd" // Gardez votre App ID actuel
+  messagingSenderId: "34951077064",
+  appId: "1:34951077064:web:e6c2633e4a59bae8f1d9fd"
 };
 
 let db, useFirebase = false;
+
 try {
-  const app = initializeApp(firebaseConfig);
-  db = getDatabase(app);
+  // syntaxe globale stable (Compat)
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
   useFirebase = true;
-  console.log("✅ Firebase Realtime connecté sur demande.html !");
+  console.log("✅ Connexion Realtime Database établie avec succès !");
 } catch(e) { 
-  console.warn('Firebase indispo, mode localStorage', e); 
+  console.warn("Échec d'initialisation Firebase, bascule locale.", e); 
 }
 
-// ══ ARTICLES depuis Firebase Realtime ══
+// 2. Synchronisation et parsing des données
 let ARTICLES = [];
+
 if (useFirebase) {
-  const articlesRef = ref(db, '/');
-  
-  onValue(articlesRef, function(snapshot) {
+  // Écoute de la racine '/' de votre arbre JSON logistique-af
+  db.ref('/').on('value', function(snapshot) {
     const data = snapshot.val();
-    console.log("Données brutes Firebase reçues :", data);
+    console.log("Données brutes lues :", data);
     
     if (data) {
-      // 1. Gestion adaptative selon le format du JSON importé
+      // Détection automatique du format (Tableau JSON ou Objet clé-valeur)
       const listeBrute = Array.isArray(data) ? data : Object.values(data);
 
-      // 2. Nettoyage et formatage strict
+      // Mappage strict vers vos clés détectées : ref, cat, nom, prix, stock
       ARTICLES = listeBrute
         .filter(function(item) { return item !== null; })
         .map(function(item, index) {
           return {
             id: item.id || item.ref || String(index),
-            nom: (item.nom ?? '').trim(),
-            ref: (item.ref ?? '').trim(),
-            cat: (item.cat ?? '').trim(),
+            nom: String(item.nom ?? '').trim(),
+            ref: String(item.ref ?? '').trim(),
+            cat: String(item.cat ?? '').trim(),
             prix: parseFloat(item.prix) || 0,
             stock: parseInt(item.stock) || 0
           };
         })
         .filter(function(a) { return a.nom && a.ref && a.cat; });
 
-      console.log("Tableau ARTICLES finalisé pour le site :", ARTICLES);
+      console.log("Tableau final d'articles transmis à l'interface :", ARTICLES);
 
-      // 3. Synchronisation avec le reste de votre page
-      window.ARTICLES = ARTICLES; 
-      filteredArticles = [...ARTICLES];
+      // Injection dans vos variables de gestion globale du site
+      window.ARTICLES = ARTICLES;
+      if (typeof filteredArticles !== 'undefined') {
+        filteredArticles = [...ARTICLES];
+      }
 
-      // 4. Déclenchement de vos fonctions d'affichage
+      // Appels natifs de vos fonctions d'affichage graphique
       if (typeof initCats === 'function') initCats();
       if (typeof renderArticles === 'function') renderArticles();
-
+      
     } else {
-      console.warn("La base de données Realtime est vide.");
+      console.warn("Aucun produit trouvé dans votre base logistique-af-default-rtdb.");
     }
   }, function(error) {
-    console.error("Erreur de chargement Realtime Database:", error);
+    console.error("Erreur de droits ou d'accès à la Realtime Database :", error);
   });
 }
 </script>
