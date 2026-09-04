@@ -395,7 +395,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ── TOAST ── -->
 <div class="toast-container" id="toast-container"></div>
 
-/ ═══ SYNC FIREBASE REALTIME UNIVERSEL ═══
+// ═══ SYNC FIREBASE REALTIME UNIVERSEL ═══
 if (useFirebase) {
   db.ref('/').on('value', function(snapshot) {
     const data = snapshot.val();
