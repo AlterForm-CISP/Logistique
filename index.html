@@ -395,37 +395,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ── TOAST ── -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ══ FIREBASE REALTIME STABLE INTERFACE (CDN COMPAT) ════════════════ -->
-<script src="https://gstatic.com"></script>
-<script src="https://gstatic.com"></script>
-
-<script>
-// 1. Initialisation de votre projet logistique-af
-const firebaseConfig = {
-  apiKey: "AIzaSyAEzGevzxFCDBDcAAISqY4UQpYQNOWCYFo",
-  authDomain: "://firebaseapp.com",
-  databaseURL: "https://firebasedatabase.app", 
-  projectId: "logistique-af",
-  storageBucket: "logistique-af.firebasestorage.app",
-  messagingSenderId: "34951077064",
-  appId: "1:34951077064:web:e6c2633e4a59bae8f1d9fd"
-};
-
-let db, useFirebase = false;
-
-try {
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.database();
-  useFirebase = true;
-  console.log("✅ Connexion Realtime Database établie avec succès !");
-} catch(e) { 
-  console.warn("Échec d'initialisation Firebase, bascule locale.", e); 
-}
-
-// 2. Synchronisation et parsing des données
-let ARTICLES = [];
-
-// ═══ SYNC FIREBASE REALTIME ═══
+/ ═══ SYNC FIREBASE REALTIME UNIVERSEL ═══
 if (useFirebase) {
   db.ref('/').on('value', function(snapshot) {
     const data = snapshot.val();
@@ -434,8 +404,8 @@ if (useFirebase) {
     if (data) {
       const listeBrute = Array.isArray(data) ? data : Object.values(data);
 
-      // 1. Extraction propre de vos articles
-      ARTICLES = listeBrute
+      // 1. On extrait vos articles logistiques
+      const articlesCharges = listeBrute
         .filter(function(item) { return item !== null; })
         .map(function(item, index) {
           return {
@@ -449,25 +419,35 @@ if (useFirebase) {
         })
         .filter(function(a) { return a.nom && a.ref; });
 
-      // 2. Synchronisation globale avec le site
-      window.ARTICLES = ARTICLES;
-      filteredArticles = [...ARTICLES];
+      // 2. On remplit les variables de votre site (sans les recréer avec "let")
+      if (typeof ARTICLES !== 'undefined') ARTICLES = articlesCharges;
+      window.ARTICLES = articlesCharges;
 
-      // 3. Sécurité anti-filtrage au démarrage
-      if (typeof currentCat === 'undefined' || currentCat === 'Tous') {
+      if (typeof filteredArticles !== 'undefined') {
+        filteredArticles = [...articlesCharges];
+      } else {
+        window.filteredArticles = [...articlesCharges];
+      }
+
+      // 3. Sécurité anti-bug sur les catégories (si la variable existe)
+      if (typeof currentCat !== 'undefined') {
         currentCat = ''; 
       }
 
-      // 4. Déclenchement de l'affichage
+      console.log("Articles prêts pour l'affichage :", articlesCharges);
+
+      // 4. On force l'affichage sur votre écran
       if (typeof initCats === 'function') initCats();
       
-      // CORRECTIF CRUCIAL : On envoie un texte vide '' au lieu de rien du tout
-      // pour éviter que la recherche ne se bloque sur 'undefined'
+      // On rafraîchit la grille d'articles proprement
       if (typeof renderArticles === 'function') {
-        renderArticles(''); 
+        try {
+          renderArticles(); 
+        } catch(e) {
+          renderArticles(''); // Sécurité si votre fonction attend un texte vide
+        }
       }
       
-      // Double sécurité pour forcer le dessin de votre grille d'articles
       if (typeof applyFilters === 'function') applyFilters();
 
     } else {
@@ -477,6 +457,7 @@ if (useFirebase) {
     console.error("Erreur d'accès Realtime Database :", error);
   });
 }
+  
 // ══ State ══
 let cart = {}; // {id: qty}
 let currentStep = 0;
