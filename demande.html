@@ -1,0 +1,758 @@
+<!-- Fichier : demande.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WMS — Passer une commande</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;500;600;800&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0a0e1a; --panel:#111827; --panel2:#0d1520;
+  --border:#1e3a5f; --border2:#243b55;
+  --accent:#ff6b35; --accent2:#00d4ff; --green:#00ff88;
+  --yellow:#ffd700; --red:#ff4455; --purple:#a855f7;
+  --text:#c9d6e3; --dim:#4a6080; --white:#fff;
+  --font-head:'Exo 2',sans-serif; --font-mono:'Share Tech Mono',monospace;
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-head);min-height:100vh;font-size:14px;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,107,53,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,53,.03) 1px,transparent 1px);background-size:50px 50px;z-index:0;pointer-events:none;}
+
+/* ── Header ── */
+.header{position:sticky;top:0;z-index:100;background:rgba(10,14,26,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;gap:1rem;}
+.header-logo{font-size:1.4rem;}
+.header-title{font-size:1.05rem;font-weight:800;color:#fff;}
+.header-sub{font-family:var(--font-mono);font-size:.7rem;color:var(--accent);letter-spacing:2px;}
+.header-right{margin-left:auto;display:flex;gap:.75rem;align-items:center;}
+.btn-home{background:var(--panel);border:1px solid var(--border);color:var(--text);padding:.4rem .8rem;border-radius:8px;cursor:pointer;font-size:.8rem;text-decoration:none;display:flex;align-items:center;gap:.4rem;}
+.btn-home:hover{border-color:var(--accent);color:var(--accent);}
+
+/* ── Stepper ── */
+.stepper{display:flex;align-items:center;padding:.75rem 1.5rem;background:var(--panel2);border-bottom:1px solid var(--border);gap:.5rem;overflow-x:auto;scrollbar-width:none;}
+.stepper::-webkit-scrollbar{display:none;}
+.step{display:flex;align-items:center;gap:.5rem;padding:.55rem 1.2rem;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;color:var(--dim);transition:all .2s;white-space:nowrap;flex-shrink:0;}
+.step.active{background:rgba(255,107,53,.12);border:1px solid rgba(255,107,53,.3);color:var(--accent);}
+.step.done{color:var(--green);}
+.step-connector{width:30px;height:2px;background:var(--border);flex-shrink:0;}
+.step-connector.done{background:var(--green);}
+.step-num{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-family:var(--font-mono);}
+.step.active .step-num{background:var(--accent);color:#000;}
+.step.done .step-num{background:var(--green);color:#000;}
+
+/* ── Main ── */
+.main{position:relative;z-index:1;padding:1.5rem;max-width:900px;margin:0 auto;}
+.section{display:none;}
+.section.active{display:block;}
+.section-title{font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem;}
+
+/* ── Catalogue ── */
+.cat-filters{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;}
+.cat-btn{padding:.35rem .9rem;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--dim);cursor:pointer;font-size:.78rem;font-family:var(--font-head);transition:all .2s;}
+.cat-btn:hover{border-color:var(--accent);color:var(--accent);}
+.cat-btn.active{background:rgba(255,107,53,.15);border-color:var(--accent);color:var(--accent);}
+.search-box{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:.55rem 1rem;color:var(--text);font-size:.85rem;width:100%;margin-bottom:1rem;}
+.search-box:focus{outline:none;border-color:var(--accent2);}
+.search-box::placeholder{color:var(--dim);}
+.articles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.75rem;margin-bottom:1.5rem;max-height:55vh;overflow-y:auto;padding-right:.25rem;}
+.articles-grid::-webkit-scrollbar{width:4px;}
+.articles-grid::-webkit-scrollbar-track{background:transparent;}
+.articles-grid::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+.article-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;cursor:pointer;transition:all .25s;position:relative;}
+.article-card:hover{border-color:var(--accent2);transform:translateY(-1px);}
+.article-card.selected{border-color:var(--green);background:rgba(0,255,136,.05);}
+.article-cat{font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin-bottom:.3rem;}
+.article-nom{font-size:.88rem;font-weight:600;color:#fff;margin-bottom:.25rem;line-height:1.3;}
+.article-ref{font-family:var(--font-mono);font-size:.7rem;color:var(--accent2);}
+.article-prix{font-size:.85rem;font-weight:700;color:var(--yellow);margin-top:.4rem;}
+.article-stock{font-size:.7rem;color:var(--green);margin-top:.15rem;}
+.article-qty{position:absolute;top:.6rem;right:.6rem;display:flex;align-items:center;gap:.3rem;}
+.qty-btn{width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:var(--panel2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;transition:all .15s;}
+.qty-btn:hover{border-color:var(--accent);color:var(--accent);}
+.qty-val{font-family:var(--font-mono);font-size:.8rem;min-width:18px;text-align:center;color:#fff;}
+.selected-indicator{width:8px;height:8px;border-radius:50%;background:var(--green);position:absolute;top:.6rem;left:.6rem;}
+
+/* ── Panier flottant ── */
+.cart-bar{background:var(--panel);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:1rem;position:sticky;bottom:1rem;backdrop-filter:blur(10px);}
+.cart-summary{flex:1;min-width:160px;}
+.cart-count{font-size:1.1rem;font-weight:800;color:#fff;font-family:var(--font-mono);}
+.cart-total{font-size:.8rem;color:var(--dim);}
+.cart-items-preview{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem;}
+.cart-chip{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:20px;padding:2px 8px;font-size:.7rem;color:var(--accent2);}
+
+/* ── Forms ── */
+.form-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1rem;}
+.form-card h3{font-size:.9rem;font-weight:700;color:#fff;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr;}}
+.form-group{margin-bottom:.75rem;}
+.form-group label{display:block;font-size:.75rem;color:var(--dim);margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.5px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:.55rem .85rem;color:var(--text);font-family:var(--font-head);font-size:.85rem;transition:border .2s;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--accent);}
+.form-group input::placeholder{color:var(--dim);}
+.mode-options{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:.3rem;}
+.mode-option{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:.8rem .6rem;cursor:pointer;text-align:center;transition:all .2s;}
+.mode-option:hover{border-color:var(--accent2);}
+.mode-option.selected-mode{border-color:var(--accent);background:rgba(255,107,53,.1);}
+.mode-icon{font-size:1.3rem;margin-bottom:.2rem;}
+.mode-name{font-size:.78rem;font-weight:700;color:#fff;}
+.mode-desc{font-size:.65rem;color:var(--dim);}
+.mode-option.urgent-mode.selected-mode{border-color:var(--red);background:rgba(255,68,85,.1);}
+.urgency-warning{background:rgba(255,68,85,.1);border:1px solid rgba(255,68,85,.3);border-radius:8px;padding:.75rem 1rem;margin-top:.75rem;font-size:.82rem;color:var(--red);display:none;}
+
+/* ── Tracking ── */
+.tracking-display{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:1rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-top:.5rem;}
+.tracking-code{font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--accent);letter-spacing:2px;}
+.tracking-badge{background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--green);padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;}
+.copy-btn{background:var(--panel);border:1px solid var(--border);color:var(--text);padding:.35rem .7rem;border-radius:6px;cursor:pointer;font-size:.75rem;}
+.copy-btn:hover{border-color:var(--accent2);}
+
+/* ── Recap ── */
+.recap-box{background:var(--panel2);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem;}
+.recap-box h4{font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.75rem;}
+.recap-table{width:100%;border-collapse:collapse;}
+.recap-table th,.recap-table td{padding:.5rem .75rem;text-align:left;border-bottom:1px solid rgba(255,255,255,.05);font-size:.82rem;}
+.recap-table th{color:var(--dim);font-size:.72rem;text-transform:uppercase;}
+.recap-table tr:last-child td{border-bottom:none;}
+.total-row{display:flex;justify-content:space-between;padding:.75rem 0;border-top:1px solid var(--border);margin-top:.5rem;}
+.total-label{color:var(--dim);}
+.total-val{font-family:var(--font-mono);font-weight:700;color:var(--yellow);font-size:1.1rem;}
+
+/* ── Envoye ── */
+.success-screen{text-align:center;padding:2.5rem 1rem;}
+.success-icon{font-size:4rem;margin-bottom:1rem;animation:popIn .5s ease;}
+@keyframes popIn{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.success-title{font-size:1.5rem;font-weight:800;color:var(--green);margin-bottom:.5rem;}
+.success-sub{color:var(--dim);margin-bottom:1.5rem;}
+.success-tracking{background:var(--panel);border:1px solid var(--green);border-radius:10px;padding:1rem;display:inline-block;margin:0 auto 2rem;}
+.success-tracking .label{font-size:.72rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:.3rem;}
+.success-tracking .code{font-family:var(--font-mono);font-size:1.4rem;font-weight:700;color:var(--green);}
+.urgent-sent-badge{background:rgba(255,68,85,.15);border:1px solid rgba(255,68,85,.4);color:var(--red);padding:.5rem 1.25rem;border-radius:20px;font-weight:700;font-size:.85rem;display:inline-flex;align-items:center;gap:.5rem;margin-bottom:1rem;animation:urgentPulse 1.5s infinite;}
+@keyframes urgentPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,68,85,.4)}50%{box-shadow:0 0 0 8px rgba(255,68,85,0)}}
+
+/* ── Buttons ── */
+.btn{padding:.55rem 1.2rem;border-radius:8px;border:none;cursor:pointer;font-size:.85rem;font-weight:700;font-family:var(--font-head);transition:all .2s;display:inline-flex;align-items:center;gap:.4rem;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#e55a25;}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+.btn-ghost:hover{border-color:var(--accent2);color:var(--accent2);}
+.btn-danger{background:var(--red);color:#fff;}
+.btn-success{background:var(--green);color:#000;}
+.nav-btns{display:flex;justify-content:space-between;margin-top:1.5rem;gap:.75rem;}
+
+/* ── Toast ── */
+.toast-container{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;}
+.toast{background:var(--panel);border:1px solid var(--border2);border-radius:10px;padding:.75rem 1.25rem;font-size:.83rem;min-width:240px;animation:slideIn .3s ease;display:flex;align-items:center;gap:.6rem;}
+.toast.success{border-left:3px solid var(--green);}
+.toast.error{border-left:3px solid var(--red);}
+.toast.info{border-left:3px solid var(--accent2);}
+.toast.warn{border-left:3px solid var(--yellow);}
+@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border2);border-radius:16px;padding:2rem;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;position:relative;}
+.modal h3{font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:1rem;}
+.modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--dim);cursor:pointer;font-size:1.2rem;}
+.modal-close:hover{color:var(--red);}
+.modal-actions{display:flex;gap:.75rem;margin-top:1.5rem;justify-content:flex-end;}
+
+/* ── Empty / loading ── */
+.empty-state{text-align:center;padding:2rem;color:var(--dim);}
+.empty-state .es-icon{font-size:2.5rem;margin-bottom:.5rem;}
+
+@media(max-width:480px){
+  .main{padding:1rem;}
+  .articles-grid{grid-template-columns:1fr;}
+  .header{padding:.6rem 1rem;}
+}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div class="header">
+  <div class="header-logo">📋</div>
+  <div>
+    <div class="header-title">Passer une commande</div>
+    <div class="header-sub">ESPACE EMPLOYÉ</div>
+  </div>
+  <div class="header-right">
+    <a href="wms.html" class="btn-home">🖥️ WMS</a>
+    <a href="index.html" class="btn-home">🏠</a>
+  </div>
+</div>
+
+<!-- ── STEPPER ── -->
+<div class="stepper">
+  <div class="step active" id="step-0" onclick="goStep(0)">
+    <div class="step-num">1</div> Choisir les articles
+  </div>
+  <div class="step-connector" id="conn-0"></div>
+  <div class="step" id="step-1" onclick="goStep(1)">
+    <div class="step-num">2</div> Informations
+  </div>
+  <div class="step-connector" id="conn-1"></div>
+  <div class="step" id="step-2" onclick="goStep(2)">
+    <div class="step-num">3</div> Confirmation &amp; envoi
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+
+  <!-- ─ ÉTAPE 1 : Choisir articles ─ -->
+  <div class="section active" id="section-0">
+    <div class="section-title">📦 Sélection des articles</div>
+
+    <input class="search-box" placeholder="🔍 Rechercher un article…" oninput="filterArticles(this.value)" id="article-search"/>
+
+    <div class="cat-filters" id="cat-filters">
+      <button class="cat-btn active" onclick="setCat('',this)">Tous</button>
+    </div>
+
+    <div class="articles-grid" id="articles-grid">
+      <div class="empty-state"><div class="es-icon">⏳</div><p>Chargement…</p></div>
+    </div>
+
+    <div class="cart-bar">
+      <div class="cart-summary">
+        <div class="cart-count" id="cart-count">0 article(s)</div>
+        <div class="cart-total" id="cart-total">Total : 0,00 €</div>
+        <div class="cart-items-preview" id="cart-preview"></div>
+      </div>
+      <button class="btn btn-ghost" onclick="clearCart()">🗑️ Vider</button>
+      <button class="btn btn-primary" id="btn-step1" onclick="goStep(1)" disabled>Suivant →</button>
+    </div>
+  </div>
+
+  <!-- ─ ÉTAPE 2 : Informations ─ -->
+  <div class="section" id="section-1">
+    <div class="section-title">📝 Informations commande</div>
+
+    <div class="form-card">
+      <h3>👤 Client &amp; livraison</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nom du client *</label>
+          <input type="text" id="f-client" placeholder="Nom ou société" required/>
+        </div>
+        <div class="form-group">
+          <label>Numéro de commande client</label>
+          <input type="text" id="f-ref-client" placeholder="ex : BC-2025-001"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Adresse de livraison *</label>
+        <input type="text" id="f-adresse" placeholder="N° rue, code postal, ville"/>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Email de contact</label>
+          <input type="email" id="f-email" placeholder="client@exemple.com"/>
+        </div>
+        <div class="form-group">
+          <label>Téléphone</label>
+          <input type="tel" id="f-tel" placeholder="06 00 00 00 00"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Commentaire / instructions</label>
+        <textarea id="f-comment" style="resize:vertical;min-height:60px" placeholder="Instructions particulières pour la livraison…"></textarea>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h3>🚚 Mode de livraison *</h3>
+      <div class="mode-options">
+        <div class="mode-option selected-mode" onclick="selectMode('Standard',this)" id="mode-Standard">
+          <div class="mode-icon">📦</div>
+          <div class="mode-name">Standard</div>
+          <div class="mode-desc">3–5 jours ouvrés</div>
+        </div>
+        <div class="mode-option" onclick="selectMode('Express',this)" id="mode-Express">
+          <div class="mode-icon">⚡</div>
+          <div class="mode-name">Express</div>
+          <div class="mode-desc">24–48h</div>
+        </div>
+        <div class="mode-option urgent-mode" onclick="selectMode('Urgent',this)" id="mode-Urgent">
+          <div class="mode-icon">🚨</div>
+          <div class="mode-name">Urgent</div>
+          <div class="mode-desc">Même jour</div>
+        </div>
+      </div>
+      <div class="urgency-warning" id="urgency-warning">
+        ⚠️ <strong>Mode Urgent :</strong> Cette commande sera immédiatement signalée dans le WMS avec une alerte sonore. Utilisez uniquement en cas de réelle urgence.
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h3>🔖 Numéro de tracking</h3>
+      <p style="font-size:.8rem;color:var(--dim);margin-bottom:.75rem">Généré automatiquement. Vous pouvez aussi saisir un tracking existant.</p>
+      <div class="tracking-display">
+        <div>
+          <div class="tracking-code" id="tracking-display">—</div>
+          <div style="font-size:.72rem;color:var(--dim);margin-top:.2rem">Numéro de suivi colis</div>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <span class="tracking-badge">AUTO</span>
+          <button class="copy-btn" onclick="copyTracking()">📋 Copier</button>
+          <button class="copy-btn" onclick="regenTracking()">🔄</button>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:.75rem">
+        <label>Ou saisir un tracking existant</label>
+        <input type="text" id="f-tracking-manual" placeholder="Collez un numéro de tracking ici" oninput="setManualTracking(this.value)"/>
+      </div>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn btn-ghost" onclick="goStep(0)">← Retour</button>
+      <button class="btn btn-primary" onclick="validateInfos()">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- ─ ÉTAPE 3 : Récap & Envoi ─ -->
+  <div class="section" id="section-2">
+    <div class="section-title">✅ Récapitulatif &amp; confirmation</div>
+
+    <div class="recap-box">
+      <h4>📦 Articles commandés</h4>
+      <table class="recap-table">
+        <thead><tr><th>Article</th><th>Réf.</th><th>Qté</th><th>P.U.</th><th>Total</th></tr></thead>
+        <tbody id="recap-articles"></tbody>
+      </table>
+      <div class="total-row">
+        <span class="total-label">Total HT</span>
+        <span class="total-val" id="recap-total">0,00 €</span>
+      </div>
+    </div>
+
+    <div class="recap-box">
+      <h4>📋 Informations commande</h4>
+      <div id="recap-infos"></div>
+    </div>
+
+    <div id="recap-urgent-warn" style="display:none;background:rgba(255,68,85,.1);border:1px solid rgba(255,68,85,.3);border-radius:10px;padding:1rem;margin-bottom:1rem">
+      <p style="color:var(--red);font-weight:700;font-size:.9rem">🚨 COMMANDE URGENTE</p>
+      <p style="font-size:.8rem;color:var(--dim);margin-top:.3rem">Cette commande déclenchera une alerte sonore immédiate dans l'interface WMS.</p>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:.75rem;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem">
+      <input type="checkbox" id="confirm-check" onchange="toggleSendBtn()"/>
+      <label for="confirm-check" style="cursor:pointer;font-size:.85rem">Je confirme que les informations ci-dessus sont correctes et que la commande peut être envoyée.</label>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn btn-ghost" onclick="goStep(1)">← Modifier</button>
+      <button class="btn btn-danger" id="btn-send" onclick="openConfirmModal()" disabled>🚀 Envoyer la commande</button>
+    </div>
+  </div>
+
+  <!-- ─ ENVOYÉ ─ -->
+  <div class="section" id="section-3">
+    <div class="success-screen">
+      <div class="success-icon">🎉</div>
+      <div class="success-title">Commande envoyée !</div>
+      <div class="success-sub">Votre commande a été transmise au WMS avec succès.</div>
+
+      <div id="urgent-sent-indicator" style="display:none">
+        <div class="urgent-sent-badge">🚨 Commande marquée URGENTE — alerte envoyée</div>
+      </div>
+
+      <div class="success-tracking">
+        <div class="label">Numéro de tracking</div>
+        <div class="code" id="success-tracking">—</div>
+      </div>
+
+      <div id="success-recap" style="max-width:400px;margin:0 auto 2rem;text-align:left"></div>
+
+      <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="newOrder()">➕ Nouvelle commande</button>
+        <a href="wms.html" class="btn btn-ghost">🖥️ Voir dans le WMS</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── CONFIRMATION MODAL ── -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-confirm')">✕</button>
+    <h3>🔒 Double confirmation</h3>
+    <p style="font-size:.85rem;color:var(--dim);margin-bottom:1.25rem">Veuillez confirmer une dernière fois l'envoi de cette commande. Cette action est définitive.</p>
+    <div id="modal-confirm-recap"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-confirm')">Annuler</button>
+      <button class="btn btn-danger" onclick="sendOrder()">✅ Confirmer l'envoi</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ══ FIREBASE + LOGIC ═══════════════════════════ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ══ Firebase config ══ 
+const firebaseConfig = {
+  apiKey: "AIzaSyAEzGevzxFCDBDcAAISqY4UQpYQNOWCYFo",
+  authDomain: "wms-logistique.firebaseapp.com",
+  projectId: "wms-logistique",
+  storageBucket: "wms-logistique.firebasestorage.app",
+  messagingSenderId: "34951077064",
+  appId: "1:34951077064:web:e6c2633e4a59bae8f1d9fd"
+};
+
+let db, useFirebase = false;
+try {
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  useFirebase = true;
+  console.log("✅ Firebase connecté sur demande.html !");
+} catch(e) { 
+  console.warn('Firebase indispo, mode localStorage'); 
+}
+
+// ══ ARTICLES depuis Firebase ══
+let ARTICLES = [];
+if (useFirebase) {
+  // On récupère les articles sans le tri complexe pour éviter les erreurs d'index
+  onSnapshot(collection(db, 'articles'), function(snap) {
+    
+    // 1. On récupère les données
+    ARTICLES = snap.docs.map(function(d) {
+  const data = d.data();
+  return Object.assign({id: d.id}, data, {
+    nom: (data.nom ?? '').trim(),
+    ref: (data.ref ?? '').trim(),
+    cat: (data.cat ?? '').trim(),
+    prix: parseFloat(data.prix) || 0,
+    stock: parseInt(data.stock) || 0
+  });
+}).filter(a => a.nom && a.ref && a.cat);
+
+// 2. On met à jour la liste pour l'écran
+filteredArticles = [...ARTICLES];
+
+// 3. On met à jour les boutons de catégories
+if (typeof initCats === 'function') initCats();
+
+// 4. On dessine les articles sur la page
+if (typeof renderArticles === 'function') renderArticles();
+
+}, function(error) {
+  console.error("Erreur de chargement Firebase:", error);
+});
+}
+
+// ══ State ══
+let cart = {}; // {id: qty}
+let currentStep = 0;
+let selectedMode = 'Standard';
+let currentTracking = '';
+let filteredArticles = [...ARTICLES];
+let searchText = '';
+let currentCat = '';
+
+// ══ Helpers ══
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6).toUpperCase(); }
+function fmtEur(v){ const n=parseFloat(v); return isNaN(n)?'—':n.toFixed(2).replace('.',',')+' €'; }
+
+function showToast(msg, type='info', dur=3500){
+  const c=document.getElementById('toast-container');
+  const t=document.createElement('div');
+  t.className='toast '+type;
+  const icons={success:'✅',error:'❌',info:'ℹ️',warn:'⚠️'};
+  t.innerHTML=`<span>${icons[type]||'📢'}</span><span>${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(()=>{ t.style.animation='slideOut .3s ease forwards'; setTimeout(()=>t.remove(),300); },dur);
+}
+
+// ══ Audio ══
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx=null;
+function getCtx(){ if(!audioCtx) try{ audioCtx=new AudioCtx(); }catch(e){} return audioCtx; }
+function playBeep(f=440,d=.15,t='sine',v=.4){
+  try{ const c=getCtx(); if(!c)return; const o=c.createOscillator(),g=c.createGain(); o.connect(g);g.connect(c.destination); o.type=t;o.frequency.value=f; g.gain.setValueAtTime(v,c.currentTime); g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d); o.start(c.currentTime);o.stop(c.currentTime+d); }catch(e){}
+}
+function playAddToCart(){ playBeep(660,.08,'sine',.3); }
+function playUrgent(){ for(let i=0;i<3;i++) setTimeout(()=>{ playBeep(1200,.1,'square',.5); setTimeout(()=>playBeep(800,.1,'square',.5),120); },i*300); }
+function playSuccess(){ playBeep(880,.1,'sine'); setTimeout(()=>playBeep(1100,.1,'sine'),120); setTimeout(()=>playBeep(1320,.15,'sine'),240); }
+
+// ══ Categories ══
+function initCats(){
+  const cats=[...new Set(ARTICLES.map(a=>a.cat))];
+  const filtersEl=document.getElementById('cat-filters');
+  filtersEl.innerHTML=`<button class="cat-btn active" onclick="setCat('',this)">Tous</button>`
+    +cats.map(c=>`<button class="cat-btn" onclick="setCat('${c}',this)">${c}</button>`).join('');
+}
+
+window.setCat=function(cat,btn){
+  currentCat=cat;
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+};
+
+window.filterArticles=function(v){ searchText=v; applyFilters(); };
+
+function applyFilters(){
+  filteredArticles=ARTICLES.filter(a=>{
+    const matchCat=!currentCat||a.cat===currentCat;
+    const matchSearch=!searchText||(a.nom+a.ref+a.cat).toLowerCase().includes(searchText.toLowerCase());
+    return matchCat&&matchSearch;
+  });
+  renderArticles();
+}
+
+// ══ Articles grid ══
+function renderArticles(){
+  const grid=document.getElementById('articles-grid');
+  if(!filteredArticles.length){ grid.innerHTML='<div class="empty-state"><div class="es-icon">🔍</div><p>Aucun article trouvé</p></div>'; return; }
+  grid.innerHTML=filteredArticles.map(a=>{
+    const qty=cart[a.id]||0;
+    const sel=qty>0;
+    return `<div class="article-card${sel?' selected':''}" id="acard-${a.id}">
+      ${sel?'<div class="selected-indicator"></div>':''}
+      <div class="article-cat">${a.cat ?? 'Sans catégorie'}</div>
+      <div class="article-nom">${a.nom ?? 'Sans nom'}</div>
+      <div class="article-ref">${a.ref ?? 'Sans réf'}</div>
+      <div class="article-prix">${fmtEur(Number(a.prix ?? 0))}</div>
+      <div class="article-stock">Stock : ${Number(a.stock ?? 0)} unités</div>
+      <div class="article-qty">
+        <button class="qty-btn" onclick="changeQty('${a.id}',-1,event)">−</button>
+        <span class="qty-val" id="qty-${a.id}">${qty}</span>
+        <button class="qty-btn" onclick="changeQty('${a.id}',1,event)">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.changeQty=function(id,delta,e){
+  if(e){ e.stopPropagation(); }
+  const art=ARTICLES.find(a=>a.id===id); if(!art)return;
+  const cur=cart[id]||0;
+  const nv=Math.max(0,Math.min(art.stock,cur+delta));
+  if(nv===0) delete cart[id]; else cart[id]=nv;
+  const qEl=document.getElementById('qty-'+id);
+  if(qEl) qEl.textContent=nv;
+  const card=document.getElementById('acard-'+id);
+  if(card){
+    if(nv>0&&!card.classList.contains('selected')){
+      card.classList.add('selected');
+      card.insertAdjacentHTML('afterbegin','<div class="selected-indicator"></div>');
+    } else if(nv===0){
+      card.classList.remove('selected');
+      card.querySelector('.selected-indicator')?.remove();
+    }
+  }
+  if(delta>0) playAddToCart();
+  updateCartBar();
+};
+
+function updateCartBar(){
+  const items=Object.entries(cart).map(([id,qty])=>({...ARTICLES.find(a=>a.id===id),qte:qty,scanned:0}));
+  const total=items.reduce((s,i)=>s+i.prix*i.qte,0);
+  const count=items.reduce((s,i)=>s+i.qte,0);
+  document.getElementById('cart-count').textContent=count+' article'+(count>1?'s':'');
+  document.getElementById('cart-total').textContent='Total : '+fmtEur(total);
+  document.getElementById('cart-preview').innerHTML=items.slice(0,3).map(i=>`<span class="cart-chip">${i.nom.slice(0,20)} ×${i.qte}</span>`).join('')+(items.length>3?`<span class="cart-chip">+${items.length-3} autres</span>`:'');
+  document.getElementById('btn-step1').disabled=count===0;
+}
+
+window.clearCart=function(){ cart={}; renderArticles(); updateCartBar(); showToast('Panier vidé','warn'); };
+
+// ══ Step navigation ══
+window.goStep=function(n){
+  if(n===1 && Object.keys(cart).length===0){ showToast('Ajoutez au moins un article','warn'); return; }
+  if(n===2 && !validateInfosCheck()){ return; }
+  if(n===2) buildRecap();
+  currentStep=n;
+  document.querySelectorAll('.section').forEach((s,i)=>s.classList.toggle('active',i===n));
+  document.querySelectorAll('.step').forEach((s,i)=>{
+    s.classList.toggle('active',i===n);
+    s.classList.toggle('done',i<n);
+  });
+  document.querySelectorAll('.step-connector').forEach((c,i)=>c.classList.toggle('done',i<n));
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(n===1) genTracking();
+};
+
+// ══ Infos validation ══
+function validateInfosCheck(){
+  if(!document.getElementById('f-client').value.trim()){ showToast('Renseignez le nom du client','warn'); return false; }
+  if(!document.getElementById('f-adresse').value.trim()){ showToast('Renseignez l\'adresse de livraison','warn'); return false; }
+  return true;
+}
+
+window.validateInfos=function(){
+  if(!validateInfosCheck())return;
+  goStep(2);
+};
+
+// ══ Mode selection ══
+window.selectMode=function(mode,el){
+  selectedMode=mode;
+  document.querySelectorAll('.mode-option').forEach(m=>m.classList.remove('selected-mode'));
+  el.classList.add('selected-mode');
+  document.getElementById('urgency-warning').style.display=mode==='Urgent'?'block':'none';
+};
+
+// ══ Tracking ══
+function genTracking(){
+  currentTracking='TRK'+Date.now().toString().slice(-8)+Math.random().toString(36).slice(2,5).toUpperCase();
+  document.getElementById('tracking-display').textContent=currentTracking;
+}
+window.regenTracking=genTracking;
+window.copyTracking=function(){
+  navigator.clipboard?.writeText(currentTracking);
+  showToast('Tracking copié : '+currentTracking,'success');
+};
+window.setManualTracking=function(v){
+  if(v.trim()) currentTracking=v.trim().toUpperCase();
+  else genTracking();
+  document.getElementById('tracking-display').textContent=currentTracking;
+};
+
+// ══ Recap ══
+function buildRecap(){
+  const items=Object.entries(cart).map(([id,qty])=>({...ARTICLES.find(a=>a.id===id),qty}));
+  const total=items.reduce((s,i)=>s+i.prix*i.qty,0);
+  document.getElementById('recap-articles').innerHTML=items.map(i=>
+    `<tr><td>${i.nom}</td><td style="font-family:var(--font-mono);font-size:.75rem">${i.ref}</td><td>${i.qty}</td><td>${fmtEur(i.prix)}</td><td style="font-weight:700;color:var(--yellow)">${fmtEur(i.prix*i.qty)}</td></tr>`
+  ).join('');
+  document.getElementById('recap-total').textContent=fmtEur(total);
+  const client=document.getElementById('f-client').value;
+  const adresse=document.getElementById('f-adresse').value;
+  document.getElementById('recap-infos').innerHTML=`
+    <div style="display:grid;gap:.5rem">
+      <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Client</span><span>${client}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Adresse</span><span style="text-align:right;max-width:60%">${adresse}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Mode</span><span style="color:${selectedMode==='Urgent'?'var(--red)':selectedMode==='Express'?'var(--yellow)':'var(--text)'};font-weight:700">${selectedMode==='Urgent'?'🚨':''}${selectedMode}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:.4rem 0"><span style="color:var(--dim)">Tracking</span><span style="font-family:var(--font-mono);color:var(--accent)">${currentTracking}</span></div>
+    </div>`;
+  document.getElementById('recap-urgent-warn').style.display=selectedMode==='Urgent'?'block':'none';
+  document.getElementById('confirm-check').checked=false;
+  document.getElementById('btn-send').disabled=true;
+}
+
+window.toggleSendBtn=function(){
+  document.getElementById('btn-send').disabled=!document.getElementById('confirm-check').checked;
+};
+
+// ══ Confirm modal ══
+window.openConfirmModal=function(){
+  const client=document.getElementById('f-client').value;
+  const count=Object.values(cart).reduce((s,v)=>s+v,0);
+  document.getElementById('modal-confirm-recap').innerHTML=`
+    <div class="recap-box" style="margin-bottom:0">
+      <div style="display:grid;gap:.4rem">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Client</span><strong>${client}</strong></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Articles</span><strong>${count} article(s)</strong></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Mode</span><strong style="color:${selectedMode==='Urgent'?'var(--red)':'inherit'}">${selectedMode}</strong></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Tracking</span><strong style="font-family:var(--font-mono);color:var(--accent)">${currentTracking}</strong></div>
+      </div>
+    </div>`;
+  document.getElementById('modal-confirm').classList.add('open');
+};
+window.closeModal=function(id){ document.getElementById(id).classList.remove('open'); };
+
+// ══ Send order ══
+window.sendOrder=async function(){
+  closeModal('modal-confirm');
+  const items=Object.entries(cart).map(([id,qty])=>({...ARTICLES.find(a=>a.id===id),qty,scanned:0}));
+  const client=document.getElementById('f-client').value;
+  const now=new Date();
+  const cmd={
+    ref:'CMD-'+uid(),
+    client,
+    adresse:document.getElementById('f-adresse').value,
+    email:document.getElementById('f-email').value,
+    tel:document.getElementById('f-tel').value,
+    commentaire:document.getElementById('f-comment').value,
+    mode:selectedMode,
+    status:'en-attente',
+    progress:0,
+    tracking:currentTracking,
+    responsable:'',
+    articles:items,
+    createdAt:now.getTime(),
+    dateStr:now.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),
+    isDemo:false,
+    source:'demande',
+  };
+
+  try{
+    if(useFirebase) await addDoc(collection(db,'commandes'),cmd);
+    else {
+      cmd.id=uid();
+      const existing=JSON.parse(localStorage.getItem('wms_commandes')||'[]');
+      existing.push(cmd);
+      localStorage.setItem('wms_commandes',JSON.stringify(existing));
+    }
+    // Signal new order ping for wms.html (all modes)
+    localStorage.setItem('wms_new_order_ping','1');
+    if(selectedMode==='Urgent'){
+      localStorage.setItem('wms_urgent_ping','1');
+      playUrgent();
+    } else { playSuccess(); }
+    showSuccessScreen(cmd);
+  } catch(e){
+    showToast('Erreur lors de l\'envoi: '+e.message,'error');
+  }
+};
+
+function showSuccessScreen(cmd){
+  const items=cmd.articles;
+  const total=items.reduce((s,i)=>s+i.prix*i.qty,0);
+  goStep(3);
+  document.getElementById('success-tracking').textContent=cmd.tracking;
+  document.getElementById('urgent-sent-indicator').style.display=cmd.mode==='Urgent'?'block':'none';
+  document.getElementById('success-recap').innerHTML=`
+    <div class="recap-box" style="margin-bottom:0;margin-top:1rem">
+      <h4>Récapitulatif</h4>
+      <div style="display:grid;gap:.4rem;font-size:.83rem">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Client</span><span>${cmd.client}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Articles</span><span>${items.length} référence(s) — ${fmtEur(total)}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Mode</span><span>${cmd.mode}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Réf. WMS</span><span style="font-family:var(--font-mono);color:var(--accent2)">${cmd.ref}</span></div>
+      </div>
+    </div>`;
+}
+
+window.newOrder=function(){
+  cart={}; selectedMode='Standard';
+  document.getElementById('f-client').value='';
+  document.getElementById('f-adresse').value='';
+  document.getElementById('f-email').value='';
+  document.getElementById('f-tel').value='';
+  document.getElementById('f-comment').value='';
+  document.getElementById('f-tracking-manual').value='';
+  document.querySelectorAll('.mode-option').forEach(m=>m.classList.remove('selected-mode'));
+  document.getElementById('mode-Standard').classList.add('selected-mode');
+  document.getElementById('urgency-warning').style.display='none';
+  renderArticles(); updateCartBar(); goStep(0); genTracking();
+};
+
+// ══ Modal overlay click close ══
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',function(e){ if(e.target===this)closeModal(this.id); }));
+
+// ══ INIT ══
+(function init(){
+  initCats();
+  renderArticles();
+  updateCartBar();
+  genTracking();
+  goStep(0);
+})();
+</script>
+</body>
+</html>
