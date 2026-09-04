@@ -395,7 +395,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ── TOAST ── -->
 <div class="toast-container" id="toast-container"></div>
 
-// ═══ SYNC FIREBASE REALTIME UNIVERSEL ═══
+/<script>
 if (useFirebase) {
   db.ref('/').on('value', function(snapshot) {
     const data = snapshot.val();
@@ -419,7 +419,7 @@ if (useFirebase) {
         })
         .filter(function(a) { return a.nom && a.ref; });
 
-      // 2. On remplit les variables de votre site (sans les recréer avec "let")
+      // 2. On remplit les variables de votre site
       if (typeof ARTICLES !== 'undefined') ARTICLES = articlesCharges;
       window.ARTICLES = articlesCharges;
 
@@ -429,7 +429,7 @@ if (useFirebase) {
         window.filteredArticles = [...articlesCharges];
       }
 
-      // 3. Sécurité anti-bug sur les catégories (si la variable existe)
+      // 3. Sécurité anti-bug sur les catégories
       if (typeof currentCat !== 'undefined') {
         currentCat = ''; 
       }
@@ -439,12 +439,11 @@ if (useFirebase) {
       // 4. On force l'affichage sur votre écran
       if (typeof initCats === 'function') initCats();
       
-      // On rafraîchit la grille d'articles proprement
       if (typeof renderArticles === 'function') {
         try {
           renderArticles(); 
         } catch(e) {
-          renderArticles(''); // Sécurité si votre fonction attend un texte vide
+          renderArticles('');
         }
       }
       
