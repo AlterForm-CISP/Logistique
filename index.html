@@ -395,8 +395,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ── TOAST ── -->
 <div class="toast-container" id="toast-container"></div>
 
-!-- ══ FIREBASE REALTIME STABLE INTERFACE (CDN COMPAT) ════════════════ -->
-<!-- Chargement sécurisé des bibliothèques globales Firebase -->
+<!-- ══ FIREBASE REALTIME STABLE INTERFACE (CDN COMPAT) ════════════════ -->
 <script src="https://gstatic.com"></script>
 <script src="https://gstatic.com"></script>
 
@@ -415,7 +414,6 @@ const firebaseConfig = {
 let db, useFirebase = false;
 
 try {
-  // syntaxe globale stable (Compat)
   firebase.initializeApp(firebaseConfig);
   db = firebase.database();
   useFirebase = true;
@@ -428,16 +426,13 @@ try {
 let ARTICLES = [];
 
 if (useFirebase) {
-  // Écoute de la racine '/' de votre arbre JSON logistique-af
   db.ref('/').on('value', function(snapshot) {
     const data = snapshot.val();
     console.log("Données brutes lues :", data);
     
     if (data) {
-      // Détection automatique du format (Tableau JSON ou Objet clé-valeur)
       const listeBrute = Array.isArray(data) ? data : Object.values(data);
 
-      // Mappage strict vers vos clés détectées : ref, cat, nom, prix, stock
       ARTICLES = listeBrute
         .filter(function(item) { return item !== null; })
         .map(function(item, index) {
@@ -454,24 +449,23 @@ if (useFirebase) {
 
       console.log("Tableau final d'articles transmis à l'interface :", ARTICLES);
 
-      // Injection dans vos variables de gestion globale du site
       window.ARTICLES = ARTICLES;
       if (typeof filteredArticles !== 'undefined') {
         filteredArticles = [...ARTICLES];
       }
 
-      // Appels natifs de vos fonctions d'affichage graphique
       if (typeof initCats === 'function') initCats();
       if (typeof renderArticles === 'function') renderArticles();
       
     } else {
-      console.warn("Aucun produit trouvé dans votre base logistique-af-default-rtdb.");
+      console.warn("Aucun produit trouvé dans votre base.");
     }
   }, function(error) {
-    console.error("Erreur de droits ou d'accès à la Realtime Database :", error);
+    console.error("Erreur d'accès à la Realtime Database :", error);
   });
 }
 </script>
+
 
 // ══ State ══
 let cart = {}; // {id: qty}
