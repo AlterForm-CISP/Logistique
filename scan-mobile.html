@@ -63,6 +63,11 @@
     }
 
     function onScanSuccess(decodedText){
+       const now = Date.now();
+  // ignore si même code scanné il y a moins de 2 secondes
+  if(decodedText === lastScanCode && (now - lastScanTime) < 2000) return;
+  lastScanTime = now;
+  lastScanCode = decodedText;
       document.getElementById('last-scan').textContent = '✅ Scanné : ' + decodedText;
       document.getElementById('status').textContent = 'Envoi...';
 
