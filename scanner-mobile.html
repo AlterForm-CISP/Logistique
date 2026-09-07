@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Scanner mobile - Logistique AF</title>
+<style>
+  body{font-family:sans-serif;background:#111;color:#fff;text-align:center;margin:0;padding:1rem}
+  #session-box{margin:1rem auto;max-width:300px}
+  input{padding:.6rem;font-size:1.1rem;width:100%;box-sizing:border-box;border-radius:8px;border:none;text-align:center}
+  button{padding:.7rem 1.5rem;font-size:1rem;border:none;border-radius:8px;background:#3b82f6;color:#fff;margin-top:.6rem}
+  #reader{width:100%;max-width:400px;margin:1rem auto}
+  #last-scan{margin-top:1rem;font-size:1rem;color:#4ade80}
+  #status{color:#aaa;font-size:.85rem}
+</style>
+</head>
+<body>
+  <h2>📷 Scanner mobile</h2>
+
+  <div id="session-box">
+    <input type="text" id="session-code" placeholder="Code de session (ex: 4821)">
+    <button onclick="startSession()">Démarrer le scan</button>
+  </div>
+
+  <div id="reader" style="display:none"></div>
+  <div id="last-scan"></div>
+  <div id="status"></div>
+
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAEzGevzxFCDBDcAAISqY4UQpYQNOWCYFo",
+      authDomain: "logistique-af.firebaseapp.com",
+      projectId: "logistique-af",
+      storageBucket: "logistique-af.firebasestorage.app",
+      messagingSenderId: "34951077064",
+      appId: "1:34951077064:web:e6c2633e4a59bae8f1d9fd"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const dbFirestore = firebase.firestore();
+
+    let sessionCode = '';
+    let html5QrCode;
+
+    function startSession(){
+      sessionCode = document.getElementById('session-code').value.trim();
+      if(!sessionCode){ alert('Entre un code de session'); return; }
+      document.getElementById('session-box').style.display = 'none';
+      document.getElementById('reader').style.display = 'block';
+      startScanner();
+    }
+
+    function startScanner(){
+      html5QrCode = new Html5Qrcode("reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        onScanSuccess,
+        () => {}
+      );
+    }
+
+    function onScanSuccess(decodedText){
+      document.getElementById('last-scan').textContent = '✅ Scanné : ' + decodedText;
+      document.getElementById('status').textContent = 'Envoi...';
+
+      dbFirestore.collection('scans').add({
+        session: sessionCode,
+        code: decodedText,
+        createdAt: Date.now()
+      }).then(() => {
+        document.getElementById('status').textContent = 'Envoyé ✔️';
+      }).catch(err => {
+        document.getElementById('status').textContent = 'Erreur : ' + err.message;
+      });
+    }
+  </script>
+</body>
+</html>
