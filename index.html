@@ -725,7 +725,7 @@ window.sendOrder=async function(){
   };
 
   try{
-    if(useFirebase) await addDoc(collection(db,'commandes'),cmd);
+    if(useFirebase) await dbFirestore.collection('commandes').add(cmd);
     else {
       cmd.id=uid();
       const existing=JSON.parse(localStorage.getItem('wms_commandes')||'[]');
