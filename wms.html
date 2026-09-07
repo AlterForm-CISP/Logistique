@@ -364,6 +364,9 @@ tr:hover td{background:rgba(255,255,255,.02);}
           <button class="btn btn-ghost btn-sm" onclick="stopCamera()">⏹ Arrêter</button>
           <button class="btn btn-ghost btn-sm" onclick="simulateScan()">🎯 Simuler scan</button>
         </div>
+        <div id="session-display" style="text-align:center;margin-top:1rem;font-family:var(--font-mono)">
+          Code session : <strong id="session-code-display">----</strong>
+        </div>
       </div>
       <div class="scan-panel">
         <h3>📋 Progression commande</h3>
@@ -579,7 +582,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
 <!-- ══ FIREBASE + LOGIC (MIS À JOUR COMPTE PERSONNEL) ═══════════════════════════ -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ══ Firebase config (Connecté à votre projet personnel logistique-af) ══
 const firebaseConfig = {
@@ -596,6 +599,13 @@ try {
   const app = initializeApp(firebaseConfig);
   db = getFirestore(app);
   useFirebase = true;
+  window.db = db;
+window.collection = collection;
+window.query = query;
+window.where = where;
+window.orderBy = orderBy;
+window.onSnapshot = onSnapshot;
+window.addDoc = addDoc;
   console.log("✅ Firebase connecté avec succès sur votre compte personnel !");
 } catch(e) {
   console.warn("⚠️ Firebase non configuré, mode localStorage", e);
@@ -1571,7 +1581,52 @@ window.validateScanOrder=async function(){
   scanOrderData=null;
   document.getElementById('scan-order-select').value='';
   loadScanOrder();
+  generateSessionCode();
 };
+  let scanListenerUnsub = null;
+let currentSessionCode = null;
+
+function generateSessionCode(){
+  currentSessionCode = String(Math.floor(1000 + Math.random()*9000));
+  document.getElementById('session-code-display').textContent = currentSessionCode;
+  listenToScans(currentSessionCode);
+}
+
+function listenToScans(sessionCode){
+  if(scanListenerUnsub) scanListenerUnsub();
+  const q = query(collection(db,'scans'), where('session','==',sessionCode), orderBy('createdAt'));
+  scanListenerUnsub = onSnapshot(q, snapshot => {
+    snapshot.docChanges().forEach(change => {
+      if(change.type === 'added') processScannedCode(change.doc.data().code);
+    });
+  });
+}
+
+function processScannedCode(code){
+  if(!scanOrderData){ showToast('Sélectionnez une commande d\'abord','warn'); return; }
+  const art = scanOrderData.articles.find(a => a.ref === code);
+  if(!art){
+    flashCam('red');
+    updateCamIndicator('fail','❌ Code inconnu');
+    document.getElementById('scan-msg').textContent = `❌ Aucun article avec la référence : ${code}`;
+    document.getElementById('scan-msg').className = 'scan-msg err';
+    return;
+  }
+  const qte = Number(art.qte ?? art.qty ?? 0);
+  if((art.scanned||0) >= qte){
+    updateCamIndicator('fail','⚠️ Déjà complet');
+    document.getElementById('scan-msg').textContent = `⚠️ ${art.nom} déjà entièrement scanné`;
+    document.getElementById('scan-msg').className = 'scan-msg err';
+    return;
+  }
+  art.scanned = (art.scanned||0) + 1;
+  flashCam('green'); playSuccess();
+  updateCamIndicator('success','✅ Article scanné');
+  document.getElementById('scan-msg').textContent = `✅ Article scanné: ${art.nom}`;
+  document.getElementById('scan-msg').className = 'scan-msg ok';
+  updateScanProgress();
+  saveScanProgress();
+}
 
 // ══ Données ══
 let _fbListening = false;
