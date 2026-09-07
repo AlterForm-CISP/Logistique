@@ -1533,6 +1533,7 @@ document.getElementById('scan-order-info').innerHTML=`
   </div>`;
 document.getElementById('scan-progress-wrap').style.display='block';
 updateScanProgress();
+  generateSessionCode();
 };
 
 function updateScanProgress(){
@@ -1581,7 +1582,6 @@ window.validateScanOrder=async function(){
   scanOrderData=null;
   document.getElementById('scan-order-select').value='';
   loadScanOrder();
-  generateSessionCode();
 };
   let scanListenerUnsub = null;
 let currentSessionCode = null;
