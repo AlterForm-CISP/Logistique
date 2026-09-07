@@ -1461,24 +1461,15 @@ window.loadScenario = async function (level) {
 // ══ SCAN / Camera ══
 let cameraStream=null, scanOrderData=null, scanSimInterval=null;
 
-window.startCamera=async function(){
-  try{
-    if(cameraStream)return;
-    cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
-    const video=document.getElementById('camera-video');
-    video.srcObject=cameraStream;
-    document.getElementById('cam-indicator').className='cam-indicator waiting';
-    document.getElementById('cam-indicator').textContent='🔍 Prêt à scanner';
-    showToast('Caméra démarrée','success');
-  }catch(e){
-    showToast('Impossible d\'accéder à la caméra: '+e.message,'error');
-    document.getElementById('cam-indicator').textContent='❌ Caméra indisponible';
-  }
+window.startCamera=function(){
+  document.getElementById('waiting-icon').style.opacity = '1';
+  document.getElementById('cam-indicator').className='cam-indicator waiting';
+  document.getElementById('cam-indicator').textContent='📱 En attente du téléphone';
+  showToast('Prêt à recevoir les scans du téléphone','success');
 };
 
 window.stopCamera=function(){
-  if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
-  document.getElementById('camera-video').srcObject=null;
+  document.getElementById('waiting-icon').style.opacity = '.3';
   document.getElementById('cam-indicator').className='cam-indicator waiting';
   document.getElementById('cam-indicator').textContent='⏳ En attente';
 };
