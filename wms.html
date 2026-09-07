@@ -1461,7 +1461,8 @@ window.loadScenario = async function (level) {
 };
 
 // ══ SCAN / Camera ══
-
+let scanOrderData=null;
+  
 window.startCamera=function(){
   document.getElementById('waiting-icon').style.opacity = '1';
   document.getElementById('cam-indicator').className='cam-indicator waiting';
