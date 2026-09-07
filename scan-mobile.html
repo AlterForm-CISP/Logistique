@@ -43,6 +43,8 @@
 
     let sessionCode = '';
     let html5QrCode;
+    let lastScanTime = 0;
+let lastScanCode = '';
 
     function startSession(){
       sessionCode = document.getElementById('session-code').value.trim();
