@@ -349,15 +349,15 @@ tr:hover td{background:rgba(255,255,255,.02);}
             <option value="">— Choisir une commande —</option>
           </select>
         </label>
-        <div id="camera-container">
-          <video id="camera-video" autoplay muted playsinline></video>
-          <div class="cam-overlay">
-            <div class="scan-frame"></div>
-          </div>
-          <div class="cam-flash green" id="flash-green"></div>
-          <div class="cam-flash red" id="flash-red"></div>
-          <div class="cam-indicator waiting" id="cam-indicator">⏳ En attente</div>
-        </div>
+      <div id="camera-container">
+  <div id="waiting-icon" style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem">📱</div>
+  <div class="cam-overlay">
+    <div class="scan-frame"></div>
+  </div>
+  <div class="cam-flash green" id="flash-green"></div>
+  <div class="cam-flash red" id="flash-red"></div>
+  <div class="cam-indicator waiting" id="cam-indicator">⏳ En attente</div>
+</div>
         <div class="scan-msg" id="scan-msg"></div>
         <div class="cam-controls">
           <button class="btn btn-primary btn-sm" onclick="startCamera()">📷 Démarrer</button>
