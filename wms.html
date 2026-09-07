@@ -1227,6 +1227,7 @@ function renderHistorique(list){
         ${h.ref?`<div class="hist-detail">Réf: ${h.ref}</div>`:''}
       </div>
       <div class="hist-time">${timeStr}</div>
+      <button class="btn btn-ghost btn-sm" onclick='showHistDetails(${JSON.stringify(h).replace(/'/g,"&#39;")})'>👁️ Détails</button>
     </div>`;
   }).join('');
 }
@@ -1238,7 +1239,29 @@ window.clearHistorique=async function(){
   } else { DATA.historique=[]; saveLocal('historique'); }
   allHistorique=[]; renderHistorique([]); showToast('Historique effacé','warn');
 };
+window.showHistDetails=function(entry){
+  const rows = Object.entries(entry)
+    .filter(([key]) => !['icon','color'].includes(key)) // on masque les champs purement visuels
+    .map(([key,val]) => {
+      let displayVal = val;
+      if(key === 'createdAt') displayVal = new Date(val).toLocaleString('fr-FR');
+      if(typeof val === 'object' && val !== null) displayVal = JSON.stringify(val, null, 2);
+      return `<div style="display:flex;justify-content:space-between;gap:1rem;padding:.4rem 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--dim);font-size:.8rem">${key}</span>
+        <span style="font-size:.85rem;text-align:right;word-break:break-word">${displayVal}</span>
+      </div>`;
+    }).join('');
 
+  const modalHtml = `
+    <div class="modal-overlay" id="modal-hist-details" style="display:flex" onclick="if(event.target===this)this.remove()">
+      <div class="modal">
+        <button class="modal-close" onclick="document.getElementById('modal-hist-details').remove()">✕</button>
+        <h3>📋 Détails de l'action</h3>
+        <div style="margin-top:1rem">${rows}</div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
 // ══ SCENARIOS ══
 const SCENARIO_CONFIGS = {
   easy: { cmds: 10, receps: 3, rets: 3, ncRatio: 0 },
