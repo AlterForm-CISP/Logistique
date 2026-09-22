@@ -8,20 +8,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;500;600;800&display=swap" rel="stylesheet"/>
 <style>
 :root {
-  --bg:#0a0e1a; --panel:#111827; --panel2:#0d1520;
-  --border:#1e3a5f; --border2:#243b55;
+  --bg:#1c2333; --panel:#28324a; --panel2:#212a3d;
+  --border:#3d4d70; --border2:#4a5c82;
   --accent:#00d4ff; --accent2:#ff6b35; --green:#00ff88;
   --yellow:#ffd700; --red:#ff4455; --purple:#a855f7;
-  --text:#c9d6e3; --dim:#4a6080; --white:#fff;
+  --text:#eef2f8; --dim:#93a1bf; --white:#fff;
   --font-head:'Exo 2',sans-serif; --font-mono:'Share Tech Mono',monospace;
   --radius:12px;
 }
+html{font-size:18px;}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:var(--font-head);min-height:100vh;font-size:14px;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-head);min-height:100vh;font-size:16px;}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);background-size:50px 50px;z-index:0;pointer-events:none;}
 
 /* ── Header ── */
-.header{position:sticky;top:0;z-index:100;background:rgba(10,14,26,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;gap:1rem;}
+.header{position:sticky;top:0;z-index:100;background:rgba(28,35,51,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;gap:1rem;}
 .header-logo{font-size:1.4rem;}
 .header-title{font-size:1.1rem;font-weight:800;color:#fff;letter-spacing:-0.5px;}
 .header-sub{font-family:var(--font-mono);font-size:.7rem;color:var(--accent);letter-spacing:2px;}
@@ -110,6 +111,12 @@ tr:hover td{background:rgba(255,255,255,.02);}
 .status.quarantaine::before{background:var(--purple);}
 .status.resolue{background:rgba(0,255,136,.1);color:var(--green);}
 .status.resolue::before{background:var(--green);}
+.status.attente{background:rgba(255,165,0,.1);color:orange;}
+.status.attente::before{background:orange;}
+.status.contact{background:rgba(168,85,247,.1);color:var(--purple);}
+.status.contact::before{background:var(--purple);}
+.status.refusee{background:rgba(255,68,85,.1);color:var(--red);}
+.status.refusee::before{background:var(--red);}
 .actions-cell{display:flex;gap:.4rem;flex-wrap:wrap;}
 .progress-bar{background:rgba(255,255,255,.08);border-radius:20px;height:6px;overflow:hidden;min-width:80px;}
 .progress-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .3s;}
@@ -230,6 +237,11 @@ tr:hover td{background:rgba(255,255,255,.02);}
 .loading{display:flex;align-items:center;justify-content:center;padding:2rem;gap:.75rem;color:var(--dim);}
 .spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Stock levels ── */
+.stock-red{color:var(--red);font-weight:700;}
+.stock-orange{color:var(--accent2);font-weight:700;}
+.stock-green{color:var(--green);font-weight:700;}
 </style>
 </head>
 <body>
@@ -265,15 +277,19 @@ tr:hover td{background:rgba(255,255,255,.02);}
   <div class="nav-tab" onclick="switchTab('scan')" id="tab-scan">
     📷 Scan Prép.
   </div>
+ <div class="nav-tab" onclick="switchTab('fournisseurs')" id="tab-fournisseurs">
+    🏭 Clients & Fournisseurs
+  </div>
+<div class="nav-tab" onclick="switchTab('articles')" id="tab-articles">
+    📋 Articles
+  </div>
   <div class="nav-tab" onclick="switchTab('historique')" id="tab-historique">
     🕘 Historique
   </div>
   <div class="nav-tab" onclick="switchTab('scenarios')" id="tab-scenarios">
     🎮 Scénarios
   </div>
-  <div class="nav-tab" onclick="switchTab('articles')" id="tab-articles">
-    📋 Articles
-  </div>
+ 
 </div>
 
 <!-- ══ MAIN CONTENT ════════════════════════════════ -->
@@ -313,7 +329,15 @@ tr:hover td{background:rgba(255,255,255,.02);}
   <!-- ─ RETOURS ─ -->
   <div class="section" id="section-retours">
     <div class="toolbar">
+      <select class="filter" onchange="filterRetourStatus(this.value)">
+        <option value="">Tous les statuts</option>
+        <option value="conforme">Conforme</option>
+        <option value="non-conforme">Non conforme</option>
+        <option value="quarantaine">🔒 Quarantaine</option>
+        <option value="resolue">✅ Résolu</option>
+      </select>
       <button class="btn btn-ghost btn-sm" onclick="generateDemoRetours()">🔄 Générer 10 retours démo</button>
+      <button class="btn btn-ghost btn-sm" onclick="purgeRetours()">🗑️ Purger</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -328,12 +352,22 @@ tr:hover td{background:rgba(255,255,255,.02);}
   <!-- ─ RECEPTION ─ -->
   <div class="section" id="section-reception">
     <div class="toolbar">
+      <select class="filter" onchange="filterReceptionStatus(this.value)">
+        <option value="">Tous les statuts</option>
+        <option value="conforme">Conforme</option>
+        <option value="non-conforme">Non conforme</option>
+        <option value="attente">⏳ En attente</option>
+        <option value="contact-fournisseur">📞 Contact fournisseur</option>
+        <option value="refusee">🚫 Refusée</option>
+        <option value="resolue">✅ Résolu</option>
+      </select>
       <button class="btn btn-ghost btn-sm" onclick="generateDemoReceptions()">🔄 Générer 10 réceptions démo</button>
+      <button class="btn btn-ghost btn-sm" onclick="purgeReceptions()">🗑️ Purger</button>
     </div>
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>Référence</th><th>Fournisseur</th><th>Articles</th><th>Qté attendue</th><th>Statut</th><th>Actions</th>
+          <th>Référence</th><th>Fournisseur</th><th>Articles</th><th>Qté totale</th><th>Statut</th><th>Actions</th>
         </tr></thead>
         <tbody id="tbody-receptions"></tbody>
       </table>
@@ -449,7 +483,6 @@ tr:hover td{background:rgba(255,255,255,.02);}
     </div>
     <div style="margin-top:1.5rem;display:flex;gap:.75rem;flex-wrap:wrap">
       <button class="btn btn-ghost" onclick="resetScenarios()">🔄 Réinitialiser tous les scénarios</button>
-      <button class="btn btn-ghost" id="btn-progress" onclick="showProgress()">📊 Voir progression élèves</button>
     </div>
   </div>
 
@@ -514,6 +547,19 @@ tr:hover td{background:rgba(255,255,255,.02);}
   </div>
 </div>
 
+<!-- Stock épuisé -->
+<div class="modal-overlay" id="modal-stock-vide">
+  <div class="modal" style="text-align:center">
+    <button class="modal-close" onclick="closeModal('modal-stock-vide')">✕</button>
+    <div style="font-size:3rem;margin-bottom:.5rem">📭</div>
+    <h3 style="color:var(--red)">Stock épuisé</h3>
+    <p id="modal-stock-vide-msg" style="color:var(--dim);margin-top:.5rem"></p>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeModal('modal-stock-vide')">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Impression -->
 <div class="modal-overlay" id="modal-print">
   <div class="modal">
@@ -527,6 +573,30 @@ tr:hover td{background:rgba(255,255,255,.02);}
   </div>
 </div>
 
+<!-- Détail réception (fournisseur, adresse, contact) -->
+<div class="modal-overlay" id="modal-reception-detail">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-reception-detail')">✕</button>
+    <h3>🚚 Détail réception</h3>
+    <div id="modal-reception-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-reception-detail')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Réponse du fournisseur suite à un contact -->
+<div class="modal-overlay" id="modal-fournisseur-reponse">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-fournisseur-reponse')">✕</button>
+    <h3>📞 Réponse du fournisseur</h3>
+    <div id="modal-fournisseur-reponse-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-fournisseur-reponse')">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Articles -->
 <div class="section" id="section-articles">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;">
@@ -535,56 +605,53 @@ tr:hover td{background:rgba(255,255,255,.02);}
       <button onclick="openAddArticleForm()" class="btn btn-success">➕ Ajouter un article</button>
       <button onclick="document.getElementById('json-import-input').click()" class="btn btn-ghost">📥 Importer JSON</button>
       <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importArticlesJSON(this)">
+      <button onclick="resetAllStocks()" class="btn btn-danger">♻️ Réinitialiser tous les stocks à 0</button>
+      <button onclick="setAllStocksTo(100)" class="btn btn-warn">🧪 Mettre tous les stocks à 100</button>
     </div>
+  </div>
+  <div class="toolbar">
+    <input class="search-box" placeholder="🔍 Recherche nom, référence…" oninput="filterArticlesWMS(this.value)" id="articles-search"/>
+    <select class="filter" id="articles-cat-filter" onchange="filterArticlesCatWMS(this.value)">
+      <option value="">Toutes les catégories</option>
+    </select>
+    <select class="filter" onchange="filterArticlesStockWMS(this.value)">
+      <option value="">Tous les niveaux de stock</option>
+      <option value="red">🔴 Critique (&lt;10)</option>
+      <option value="orange">🟠 Faible (10-20)</option>
+      <option value="green">🟢 Suffisant (&gt;20)</option>
+    </select>
   </div>
   <div id="articlesWMSContainer"></div>
 </div>
 
-<!-- Ajout article -->
-<div class="modal-overlay" id="modal-add-article">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal('modal-add-article')">×</button>
-    <h3>➕ Nouvel article</h3>
-
-    <div class="form-group">
-      <label>Nom</label>
-      <input id="add-article-nom" type="text">
-    </div>
-
-    <div class="form-group">
-      <label>Référence</label>
-      <input id="add-article-ref" type="text">
-    </div>
-
-    <div class="form-group">
-      <label>Catégorie</label>
-      <input id="add-article-cat" type="text">
-    </div>
-
-    <div class="form-group">
-      <label>Prix</label>
-      <input id="add-article-prix" type="number" step="0.01">
-    </div>
-
-    <div class="form-group">
-      <label>Stock</label>
-      <input id="add-article-stock" type="number">
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-add-article')">Annuler</button>
-      <button class="btn btn-primary" onclick="saveNewArticle()">Enregistrer</button>
+<!-- Clients & Fournisseurs (lecture seule, référence pour vérifier les adresses des commandes/réceptions) -->
+<div class="section" id="section-fournisseurs">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;">
+    <h2 style="margin:0;">👥 Clients</h2>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+      <input class="search-box" style="max-width:280px;margin:0" placeholder="🔍 Rechercher un client…" oninput="filterClientsWMS(this.value)"/>
+      <button class="btn btn-ghost btn-sm" onclick="regenerateRefData()" title="Génère de nouvelles listes de clients, fournisseurs et responsables">🔁 Régénérer les listes</button>
     </div>
   </div>
+  <p style="font-size:.8rem;color:var(--dim);margin-bottom:1rem">Liste de référence en lecture seule — sert à vérifier que l'adresse de livraison indiquée sur une commande correspond bien au client. Certaines commandes des scénarios avancés/experts contiennent volontairement une adresse erronée à corriger.</p>
+  <div id="clientsWMSContainer"></div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:2rem 0 1rem;flex-wrap:wrap;gap:.5rem;">
+    <h2 style="margin:0;">🏭 Fournisseurs</h2>
+    <input class="search-box" style="max-width:280px;margin:0" placeholder="🔍 Rechercher un fournisseur…" oninput="filterFournisseursWMS(this.value)"/>
+  </div>
+  <p style="font-size:.8rem;color:var(--dim);margin-bottom:1rem">Liste de référence en lecture seule — sert à vérifier que l'adresse indiquée sur une réception correspond bien au fournisseur.</p>
+  <div id="fournisseursWMSContainer"></div>
 </div>
 
+<!-- Ajout article -->
 <!-- Toast container -->
 <div class="toast-container" id="toast-container"></div>
 
 <!-- ══ FIREBASE + LOGIC (MIS À JOUR COMPTE PERSONNEL) ═══════════════════════════ -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDoc, getDocs, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ══ Firebase config (Connecté à votre projet personnel logistique-af) ══
 const firebaseConfig = {
@@ -636,18 +703,338 @@ if (useFirebase) {
     });
 }
 
-const CLIENTS = ['Entreprise Dupont','Mairie de Lyon','École Pasteur','Cabinet Martin','Société Renard','Atelier Leblanc','Centre Médical Duval','Clinique Saint-Luc','Lycée Jules Ferry','Association Vert Espoir','Hôtel Bristol','Restaurant Le Coin','Pharmacie Centrale','Cabinet Juridique Noir','Agence Immobilière Sud'];
-const RESPONSABLES = ['Alice Martin','Bob Leroy','Claire Dubois','David Moreau','Emma Bernard','François Petit','Gaëlle Simon','Hugo Fournier'];
 const MODES = ['Standard','Express','Urgent'];
 const MOTIFS_RETOUR = ['Article défectueux','Erreur de commande','Surplus de stock','Mauvaise référence','Emballage endommagé','Article non conforme aux specs'];
-const FOURNISSEURS = ['Bureau Plus SAS','Office Depot','Lyreco France','Bruneau Distribution','Staples Pro'];
 
 // ══ Helpers ══
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6).toUpperCase(); }
+function escapeHTML(str){
+  return String(str ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[ch]));
+}
 function randomEl(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function randomInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
 function fmtDate(ts){ if(!ts)return'—'; const d=ts.toDate?ts.toDate():new Date(ts); return d.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
 function genTracking(){ return 'TRK'+Date.now().toString().slice(-8)+Math.random().toString(36).slice(2,5).toUpperCase(); }
+
+// ══ Pools de données belges (génération de CLIENTS / RESPONSABLES / FOURNISSEURS) ══
+const PRENOMS_BE = ['Alice','Bob','Chloé','David','Emma','François','Gaëlle','Hugo','Inès','Julien','Karim','Laura','Marc','Nadia','Olivier','Pauline','Quentin','Rachida','Sébastien','Tania','Ugo','Valentine','William','Yasmine','Zoé','Antoine','Bénédicte','Cédric','Delphine','Éric','Fabienne','Grégoire','Hélène','Ismaël','Justine','Kevin','Léa','Mathieu','Nathalie','Odile','Pierre','Quitterie','Romain','Sophie','Thibault','Ursula','Vincent','Wendy','Xavier','Yannick'];
+const NOMS_BE = ['Dubois','Lambert','Peeters','Janssens','Maes','Jacobs','Mertens','Willems','Claes','Goossens','Wouters','De Smet','Dumont','Lemaire','Simon','Laurent','Michaux','Bertrand','Leroy','Fontaine','Hermans','Vermeulen','Van Damme','Dewulf','Colin','Georges','Renard','Gillet','Marchal','Delvaux','Van den Berg','De Backer','Verhoeven','Coppens','Vandenberghe'];
+
+const STREET_TYPES_BE = ['Rue','Avenue','Boulevard','Chaussée','Place','Allée','Clos','Square'];
+const STREET_NAMES_BE = ['de la Loi','Louise','Anspach','de Charleroi','Neuve','de Tervueren','du Marché aux Herbes','du Souverain','de Waterloo','des Bouchers','de Namur','Léopold II','Haute','de la Toison d\'Or','de Wavre','Royale','Maurice Lemonnier','des Arts','du Congrès','d\'Ixelles','Baudouin','de Flandre','de la Couronne','de la Station','du Midi','de l\'Yser','des Fleurs','du Moulin','de l\'Église','des Tilleuls','du Parc','de la Gare','de la Paix','des Combattants','du Commerce','Saint-Michel','de Bruxelles','de la Chapelle','du Château','des Écoles'];
+const VILLES_BE = [
+  {cp:'1000',ville:'Bruxelles'},{cp:'1050',ville:'Ixelles'},{cp:'1180',ville:'Uccle'},{cp:'1200',ville:'Woluwe-Saint-Lambert'},
+  {cp:'1300',ville:'Wavre'},{cp:'1400',ville:'Nivelles'},{cp:'1420',ville:'Braine-l\'Alleud'},
+  {cp:'2000',ville:'Anvers'},{cp:'2018',ville:'Anvers'},{cp:'2300',ville:'Turnhout'},{cp:'2800',ville:'Malines'},
+  {cp:'3000',ville:'Louvain'},{cp:'3500',ville:'Hasselt'},{cp:'3600',ville:'Genk'},
+  {cp:'4000',ville:'Liège'},{cp:'4020',ville:'Liège'},{cp:'4500',ville:'Huy'},{cp:'4700',ville:'Eupen'},{cp:'4800',ville:'Verviers'},{cp:'4900',ville:'Spa'},
+  {cp:'5000',ville:'Namur'},{cp:'5100',ville:'Jambes'},{cp:'5500',ville:'Dinant'},
+  {cp:'6000',ville:'Charleroi'},{cp:'6600',ville:'Bastogne'},{cp:'6700',ville:'Arlon'},{cp:'6900',ville:'Marche-en-Famenne'},
+  {cp:'7000',ville:'Mons'},{cp:'7100',ville:'La Louvière'},{cp:'7500',ville:'Tournai'},{cp:'7700',ville:'Mouscron'},
+  {cp:'8000',ville:'Bruges'},{cp:'8400',ville:'Ostende'},{cp:'8500',ville:'Courtrai'},{cp:'8800',ville:'Roulers'},
+  {cp:'9000',ville:'Gand'},{cp:'9100',ville:'Saint-Nicolas'},{cp:'9200',ville:'Termonde'},{cp:'9300',ville:'Alost'}
+];
+const CLIENT_TYPES_BE = ['Boulangerie','Boucherie','Pharmacie','Librairie','Épicerie','Cabinet médical','Cabinet d\'avocats','École communale','Athénée royal','Maison de repos','Crèche','Auto-école','Garage','Menuiserie','Institut de beauté','Restaurant','Brasserie','Hôtel','Supermarché','Quincaillerie','Fleuriste','Traiteur','Salon de coiffure','Cabinet dentaire','Clinique vétérinaire','Bibliothèque communale','Maison communale','CPAS','Centre culturel','Centre sportif'];
+const CLIENT_SUFFIXES_BE = ['','SPRL','SA','SCRL','ASBL'];
+const FOURNISSEUR_SECTEURS_BE = ['Bureautique','Quincaillerie','Fournitures Industrielles','Distribution','Négoce','Équipements Pro','Matériel Technique','Emballages','Logistique','Outillage'];
+const FOURNISSEUR_RACINES_BE = ['Nord','Sud','Wallonie','Flandre','Ardenne','Meuse','Escaut','Sambre','Brabant','Hainaut','Condroz','Hesbaye','Campine','Fagnes','Semois'];
+const FOURNISSEUR_FORMES_BE = ['SA','SPRL','SRL','SCRL'];
+const INDICATIFS_BE = ['02','03','04','09','010','011','012','013','014','015','016','019','050','051','052','053','054','055','056','057','058','059','060','061','063','064','065','067','068','069','071','081','082','083','084','085','086','087'];
+
+function genAdresseBE(){
+  const numero = randomInt(1, 250);
+  const loc = randomEl(VILLES_BE);
+  return `${randomEl(STREET_TYPES_BE)} ${randomEl(STREET_NAMES_BE)} ${numero}, ${loc.cp} ${loc.ville}`;
+}
+function genTelephoneBE(){
+  const ind = randomEl(INDICATIFS_BE);
+  const nbChiffres = ind.length===2 ? 6 : 5;
+  let reste='';
+  for(let i=0;i<nbChiffres;i++) reste+=randomInt(0,9);
+  const groupes = nbChiffres===6 ? [reste.slice(0,2),reste.slice(2,4),reste.slice(4,6)] : [reste.slice(0,2),reste.slice(2,4),reste.slice(4,5)];
+  return `+32 ${ind.replace(/^0/,'')} ${groupes.join(' ')}`;
+}
+function slugifyBE(str){
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-+|-+$)/g,'');
+}
+function genUniqueListBE(count, generatorFn){
+  const seen=new Set(), out=[];
+  let guard=0;
+  while(out.length<count && guard<count*80){
+    guard++;
+    const val=generatorFn();
+    const key = typeof val==='string' ? val : val.nom;
+    if(!seen.has(key)){ seen.add(key); out.push(val); }
+  }
+  return out;
+}
+
+// Listes de référence : générées une seule fois, puis persistées (Firestore ou localStorage)
+// afin qu'elles restent stables d'un rechargement à l'autre — sinon les commandes/réceptions
+// déjà en base référenceraient des clients/fournisseurs qui n'existent plus.
+let CLIENTS = [];
+let RESPONSABLES = [];
+let FOURNISSEURS = [];
+
+function genClientsBE(){
+  return genUniqueListBE(100, ()=>{
+    const loc=randomEl(VILLES_BE);
+    const suffix=randomEl(CLIENT_SUFFIXES_BE);
+    const nom = `${randomEl(CLIENT_TYPES_BE)} ${loc.ville}${suffix?' '+suffix:''}`;
+    return { nom, adresse: genAdresseBE() };
+  });
+}
+function genResponsablesBE(){
+  return genUniqueListBE(100, ()=>`${randomEl(PRENOMS_BE)} ${randomEl(NOMS_BE)}`);
+}
+function genFournisseursBE(){
+  return genUniqueListBE(100, ()=>{
+    const nom = `${randomEl(FOURNISSEUR_SECTEURS_BE)} ${randomEl(FOURNISSEUR_RACINES_BE)} ${randomEl(FOURNISSEUR_FORMES_BE)}`;
+    return {
+      nom,
+      adresse: genAdresseBE(),
+      telephone: genTelephoneBE(),
+      email: `contact@${slugifyBE(nom)}.be`,
+    };
+  });
+}
+
+async function ensureRefData(){
+  // 1) Tentative de lecture depuis Firestore (source de vérité partagée entre postes)
+  if(useFirebase){
+    try{
+      const snap = await getDoc(doc(db,'refdata','listes'));
+      if(snap.exists()){
+        const d = snap.data();
+        if(Array.isArray(d.clients) && d.clients.length){
+          CLIENTS = d.clients; RESPONSABLES = d.responsables || []; FOURNISSEURS = d.fournisseurs || [];
+          localStorage.setItem('wms_refdata', JSON.stringify({CLIENTS,RESPONSABLES,FOURNISSEURS}));
+          return;
+        }
+      }
+    }catch(e){ console.warn('Lecture refdata Firestore impossible, bascule locale', e); }
+  }
+
+  // 2) Sinon, cache local
+  try{
+    const cached = localStorage.getItem('wms_refdata');
+    if(cached){
+      const d = JSON.parse(cached);
+      if(Array.isArray(d.CLIENTS) && d.CLIENTS.length){
+        CLIENTS = d.CLIENTS; RESPONSABLES = d.RESPONSABLES || []; FOURNISSEURS = d.FOURNISSEURS || [];
+        if(useFirebase){
+          try{ await setDoc(doc(db,'refdata','listes'),{clients:CLIENTS,responsables:RESPONSABLES,fournisseurs:FOURNISSEURS}); }catch(e){}
+        }
+        return;
+      }
+    }
+  }catch(e){ console.warn('Cache refdata local illisible', e); }
+
+  // 3) Première utilisation : on génère, puis on persiste
+  CLIENTS = genClientsBE();
+  RESPONSABLES = genResponsablesBE();
+  FOURNISSEURS = genFournisseursBE();
+  localStorage.setItem('wms_refdata', JSON.stringify({CLIENTS,RESPONSABLES,FOURNISSEURS}));
+  if(useFirebase){
+    try{ await setDoc(doc(db,'refdata','listes'),{clients:CLIENTS,responsables:RESPONSABLES,fournisseurs:FOURNISSEURS}); }
+    catch(e){ console.warn('Écriture refdata Firestore impossible', e); }
+  }
+}
+
+// Régénère complètement les listes de référence (action manuelle)
+window.regenerateRefData = async function(){
+  if(!confirm('Régénérer toutes les listes de clients, fournisseurs et responsables ?\n\nLes commandes et réceptions existantes référenceront des noms qui n\'existeront plus.')) return;
+  CLIENTS = genClientsBE();
+  RESPONSABLES = genResponsablesBE();
+  FOURNISSEURS = genFournisseursBE();
+  localStorage.setItem('wms_refdata', JSON.stringify({CLIENTS,RESPONSABLES,FOURNISSEURS}));
+  if(useFirebase){
+    try{ await setDoc(doc(db,'refdata','listes'),{clients:CLIENTS,responsables:RESPONSABLES,fournisseurs:FOURNISSEURS}); }
+    catch(e){ showToast('Erreur lors de l\'enregistrement des listes','error'); return; }
+  }
+  await addHistorique({type:'refdata',icon:'🔁',color:'var(--purple)',msg:'Listes de référence (clients, fournisseurs, responsables) régénérées'});
+  showToast('Listes de référence régénérées','success');
+  if(document.getElementById('section-fournisseurs')?.classList.contains('active')){ loadFournisseursWMS(); loadClientsWMS(); }
+};
+
+// ══ Motifs de non-conformité des réceptions + réponses fournisseur associées ══
+const RECEPTION_NC_TYPES = ['emballage','manque','endommages','incorrects'];
+function genMotifNonConforme(qteAttendue){
+  const type = randomEl(RECEPTION_NC_TYPES);
+  const qte = Math.max(1, Number(qteAttendue)||1);
+  if(type==='manque'){
+    const maxX = Math.max(1, Math.floor(qte*0.4));
+    const x = randomInt(1, maxX);
+    return { type, label: `Manque ${x} article${x>1?'s':''}`, x };
+  }
+  if(type==='endommages'){
+    const maxX = Math.max(1, Math.floor(qte*0.2));
+    const x = randomInt(1, maxX);
+    return { type, label: `${x} article${x>1?'s':''} endommagé${x>1?'s':''}`, x };
+  }
+  if(type==='emballage') return { type, label: 'Emballage endommagé' };
+  return { type, label: 'Articles incorrects' };
+}
+
+const REPONSES_FOURNISSEUR = {
+  emballage: [
+    "Bonjour, nous vous renvoyons les produits abîmés.",
+    "Bonjour, nous effectuons une réduction sur votre facture. Un remboursement partiel sera effectué.",
+    "Bonjour, nous vous transmettons une étiquette de retour afin de nous renvoyer les articles endommagés.",
+    "Bonjour, nous refusons de récupérer les articles endommagés. Vous avez signé le bon de livraison \"sans réserve\"."
+  ],
+  endommages: [
+    "Bonjour, nous vous renvoyons les produits abîmés.",
+    "Bonjour, nous effectuons une réduction sur votre facture. Un remboursement partiel sera effectué.",
+    "Bonjour, nous vous transmettons une étiquette de retour afin de nous renvoyer les articles endommagés.",
+    "Bonjour, nous refusons de récupérer les articles endommagés. Vous avez signé le bon de livraison \"sans réserve\"."
+  ],
+  manque: [
+    "Bonjour, le reste de votre commande est en route avec un autre livreur.",
+    "Bonjour, nous avons une rupture de stock sur cet article. Nous vous rembourserons le montant des articles manquants.",
+    "Bonjour, nous nous excusons pour le désagrément. Nous préparons un nouvel envoi.",
+    "Bonjour, nous vous demandons de patienter 1 semaine afin que nous puissions mener notre enquête auprès de la société de livraison.",
+    "Bonjour, la commande est partie complète et vous avez signé le bon de livraison sans indiquer qu'il manquait des articles. Nous refusons donc de vous renvoyer les articles manquants."
+  ],
+  incorrects: [
+    "Bonjour, nous avons vérifié vos photos, nous vous renvoyons les bons articles ainsi qu'une étiquette prépayée pour nous renvoyer les articles erronés.",
+    "Bonjour, vous pouvez conserver l'article. Nous vous envoyons un bon d'achat pour la prochaine commande.",
+    "Bonjour, le produit que vous aviez commandé est en rupture de stock. Nous vous remboursons la totalité des produits incorrects et prenons en charge les frais de transport pour le retour des produits.",
+    "Bonjour, nous devons d'abord inspecter l'article dans nos entrepôts avant quoi que ce soit. Nous vous envoyons une étiquette de transport gratuite pour le retour.",
+    "Bonjour, le produit envoyé est celui que vous avez commandé. Vous avez dû faire une erreur lors de votre commande."
+  ]
+};
+
+// ══ Réponses fournisseur pour les RETOURS (renvoi au fournisseur), selon le motif du retour ══
+const REPONSES_FOURNISSEUR_RETOUR = {
+  'Article défectueux': [
+    "Bonjour, nous vous envoyons un article de remplacement sans frais supplémentaires.",
+    "Bonjour, nous remboursons intégralement cet article suite au défaut constaté.",
+    "Bonjour, merci de nous renvoyer l'article défectueux accompagné de photos, nous traiterons le dossier sous 48h.",
+    "Bonjour, ce défaut n'est pas couvert par notre garantie fournisseur. Nous ne pouvons pas reprendre cet article."
+  ],
+  'Erreur de commande': [
+    "Bonjour, une erreur de préparation de notre côté, toutes nos excuses. Nous vous envoyons le bon article sans frais.",
+    "Bonjour, l'erreur provient de la commande initiale et non de notre préparation. Les frais de retour restent à votre charge.",
+    "Bonjour, nous acceptons l'échange, merci de nous renvoyer l'article non désiré dans son emballage d'origine.",
+    "Bonjour, nous vous proposons un avoir correspondant à la valeur de l'article."
+  ],
+  'Surplus de stock': [
+    "Bonjour, nous acceptons la reprise avec une décote de 15% sur la valeur de l'article.",
+    "Bonjour, nous n'acceptons pas les retours pour surplus de stock, la commande a été validée telle quelle.",
+    "Bonjour, un avoir vous sera crédité sur votre prochaine commande.",
+    "Bonjour, merci de nous renvoyer les articles dans leur emballage d'origine non ouvert pour validation du retour."
+  ],
+  'Mauvaise référence': [
+    "Bonjour, nous avons vérifié : la référence livrée correspond bien à votre commande. Vous avez dû vous tromper en commandant.",
+    "Bonjour, nous confirmons l'erreur de référence de notre côté, un échange gratuit est en cours de préparation.",
+    "Bonjour, merci de nous indiquer la référence exacte souhaitée, nous procéderons à l'échange sous réserve de disponibilité.",
+    "Bonjour, nous vous remboursons l'article et vous laissons repasser commande pour la bonne référence."
+  ],
+  'Emballage endommagé': [
+    "Bonjour, nous acceptons le retour et remboursons intégralement l'article endommagé.",
+    "Bonjour, nous vous envoyons une étiquette de retour prépayée pour cet article endommagé.",
+    "Bonjour, un avoir partiel sera appliqué en compensation de l'emballage endommagé.",
+    "Bonjour, l'emballage endommagé ne justifie pas un retour si l'article lui-même est intact. Retour refusé."
+  ],
+  'Article non conforme aux specs': [
+    "Bonjour, après vérification, l'article est conforme aux spécifications commandées. Retour refusé.",
+    "Bonjour, nous confirmons la non-conformité et procédons au remboursement complet.",
+    "Bonjour, nous vous proposons un article de remplacement conforme aux spécifications demandées.",
+    "Bonjour, merci de nous transmettre des photos afin de valider la non-conformité avant tout remboursement."
+  ]
+};
+
+// ══ Gestion du stock (nouveau) ══
+function stockClass(stock){
+  const s = Number(stock ?? 0);
+  if (s < 10) return 'stock-red';
+  if (s <= 20) return 'stock-orange';
+  return 'stock-green';
+}
+
+async function adjustStock(articleId, delta){
+  if(!articleId || !delta) return;
+  if(useFirebase){
+    try{
+      const art = ARTICLES.find(a=>a.id===articleId);
+      const current = Number(art?.stock ?? 0);
+      const next = Math.max(0, current + delta);
+      await updateDoc(doc(db,'articles',articleId), { stock: next });
+    }catch(e){
+      console.error('Erreur mise à jour du stock:', e);
+    }
+  } else {
+    const art = ARTICLES.find(a=>a.id===articleId);
+    if(art){ art.stock = Math.max(0, Number(art.stock||0) + delta); }
+  }
+}
+
+// Diminue le stock pour chaque article d'une commande (au moment de l'expédition)
+async function adjustStockForOrder(cmd){
+  if(!cmd || !Array.isArray(cmd.articles)) return;
+  for(const a of cmd.articles){
+    const qte = Number(a.qte ?? a.qty ?? 0);
+    if(qte > 0 && a.id) await adjustStock(a.id, -qte);
+  }
+}
+
+// Augmente le stock pour chaque article d'une réception (au moment de la validation)
+async function adjustStockForReception(rec){
+  if(!rec) return;
+  const items = Array.isArray(rec.articlesDetail) ? rec.articlesDetail : [];
+  for(const a of items){
+    const qte = Number(a.qte ?? 0);
+    if(qte > 0 && a.id) await adjustStock(a.id, qte);
+  }
+}
+
+// Remet le stock de tous les articles à 0 (action manuelle, irréversible)
+window.resetAllStocks = async function(){
+  if(!ARTICLES || !ARTICLES.length){ showToast('Aucun article chargé', 'error'); return; }
+  if(!confirm(`Remettre le stock de TOUS les articles (${ARTICLES.length}) à 0 ? Cette action est irréversible.`)) return;
+  if(!confirm('Confirmation finale : les stocks seront tous à 0 immédiatement. Continuer ?')) return;
+
+  try{
+    if(useFirebase){
+      const b = writeBatch(db);
+      ARTICLES.forEach(a => { b.update(doc(db,'articles',a.id), { stock: 0 }); });
+      await b.commit();
+    } else {
+      ARTICLES.forEach(a => { a.stock = 0; });
+      if(typeof window.loadArticlesWMS === 'function') window.loadArticlesWMS();
+    }
+    await addHistorique({type:'stock',icon:'♻️',color:'var(--red)',msg:`Réinitialisation manuelle : stock de ${ARTICLES.length} articles remis à 0`});
+    showToast('Tous les stocks ont été remis à 0', 'success');
+  } catch(error){
+    console.error('Erreur réinitialisation stocks:', error);
+    showToast('Erreur lors de la réinitialisation des stocks', 'error');
+  }
+};
+
+// Met le stock de tous les articles à une valeur fixe (pratique pour les tests)
+window.setAllStocksTo = async function(valeur){
+  if(!ARTICLES || !ARTICLES.length){ showToast('Aucun article chargé', 'error'); return; }
+  if(!confirm(`Mettre le stock de TOUS les articles (${ARTICLES.length}) à ${valeur} ?`)) return;
+
+  try{
+    if(useFirebase){
+      const b = writeBatch(db);
+      ARTICLES.forEach(a => { b.update(doc(db,'articles',a.id), { stock: valeur }); });
+      await b.commit();
+    } else {
+      ARTICLES.forEach(a => { a.stock = valeur; });
+      if(typeof window.loadArticlesWMS === 'function') window.loadArticlesWMS();
+    }
+    await addHistorique({type:'stock',icon:'🧪',color:'var(--yellow)',msg:`Réglage manuel (test) : stock de ${ARTICLES.length} articles mis à ${valeur}`});
+    showToast(`Tous les stocks ont été mis à ${valeur}`, 'success');
+  } catch(error){
+    console.error('Erreur réglage stocks:', error);
+    showToast('Erreur lors du réglage des stocks', 'error');
+  }
+};
 
 // ══ Toast ══
 window.showToast = function(msg, type='info', dur=3500){
@@ -690,54 +1077,7 @@ window.switchTab = function(tab){
   if(tab==='scan') populateScanSelect();
   if(tab==='historique') loadHistorique();
   if(tab==='articles') loadArticlesWMS();
-};
-
-window.openAddArticleForm = function(){
-  openModal('modal-add-article');
-};
-
-window.saveNewArticle = async function(){
-  // 1. On récupère les bonnes cases avec les bons noms
-  const nom = document.getElementById('add-nom').value.trim();
-  const ref = document.getElementById('add-ref').value.trim().toUpperCase();
-  const cat = document.getElementById('add-cat').value.trim();
-  const prix = parseFloat(document.getElementById('add-prix').value || '0');
-  const stock = parseInt(document.getElementById('add-stock').value || '0', 10);
-
-  // 2. On vérifie que les champs obligatoires ne sont pas vides
-  if(!nom || !ref || !cat){
-    showToast('Veuillez remplir le nom, la réf et la catégorie', 'error');
-    return;
-  }
-
-  // 3. On envoie tout à Firebase
-  try {
-    await addDoc(collection(db, 'articles'), {
-      nom: nom,
-      ref: ref,
-      cat: cat,
-      prix: prix,
-      stock: stock,
-      createdAt: serverTimestamp()
-    });
-
-    // 4. On ferme la fenêtre et on affiche un succès
-    if(typeof closeAddArticleForm === 'function') {
-        closeAddArticleForm(); // Ferme la petite fenêtre d'ajout
-    }
-    showToast('Article ajouté avec succès !', 'success');
-
-    // On vide les cases pour le prochain article
-    document.getElementById('add-nom').value = '';
-    document.getElementById('add-ref').value = '';
-    document.getElementById('add-cat').value = '';
-    document.getElementById('add-prix').value = '';
-    document.getElementById('add-stock').value = '';
-
-  } catch(error) {
-    console.error("Erreur d'ajout Firebase:", error);
-    showToast("Erreur lors de l'enregistrement", 'error');
-  }
+  if(tab==='fournisseurs'){ loadFournisseursWMS(); loadClientsWMS(); }
 };
 
 window.deleteArticle = async function(id, e){
@@ -768,24 +1108,27 @@ function renderCommandes(){
     return urgScore(a.mode)-urgScore(b.mode)||(b.createdAt||0)-(a.createdAt||0);
   });
   tbody.innerHTML='';
-  if(!list.length){ tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="es-icon">📭</div><p>Aucune commande</p></div></td></tr>`; return; }
-  list.forEach(cmd=>{
-    const modeTag=`<span class="tag ${cmd.mode==='Urgent'?'urgent':cmd.mode==='Express'?'express':'standard'}">${cmd.mode}</span>`;
-    const statusTag=`<span class="status ${cmd.status}">${statusLabel(cmd.status)}</span>`;
-    const pct=cmd.progress||0;
-    const progBar=`<div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div><small style="color:var(--dim);font-size:.7rem">${pct}%</small>`;
-    const actions=buildCmdActions(cmd);
-    tbody.innerHTML+=`<tr>
-      <td><span class="cmd-ref">${cmd.ref}</span></td>
-      <td>${cmd.client}</td>
-      <td>${cmd.responsable||'—'}</td>
-      <td>${modeTag}</td>
-      <td>${statusTag}</td>
-      <td>${progBar}</td>
-      <td style="font-size:.75rem;color:var(--dim)">${cmd.dateStr||'—'}</td>
-      <td><div class="actions-cell">${actions}</div></td>
-    </tr>`;
-  });
+  if(!list.length){ tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="es-icon">📭</div><p>Aucune commande</p></div></td></tr>`; }
+  else {
+    list.forEach(cmd=>{
+      const modeTag=`<span class="tag ${cmd.mode==='Urgent'?'urgent':cmd.mode==='Express'?'express':'standard'}">${cmd.mode}</span>`;
+      const statusTag=`<span class="status ${cmd.status}">${statusLabel(cmd.status)}</span>`;
+      const pct=cmd.progress||0;
+      const progBar=`<div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div><small style="color:var(--dim);font-size:.7rem">${pct}%</small>`;
+      const actions=buildCmdActions(cmd);
+      const adresseWarn = cmd.adresseAVerifier ? ` <span style="color:var(--red);font-size:.75rem" title="Attention, vérifier l'adresse.">⚠️</span>` : '';
+      tbody.innerHTML+=`<tr>
+        <td><span class="cmd-ref">${cmd.ref}</span></td>
+        <td>${cmd.client}${adresseWarn}</td>
+        <td>${cmd.responsable||'—'}</td>
+        <td>${modeTag}</td>
+        <td>${statusTag}</td>
+        <td>${progBar}</td>
+        <td style="font-size:.75rem;color:var(--dim)">${cmd.dateStr||'—'}</td>
+        <td><div class="actions-cell">${actions}</div></td>
+      </tr>`;
+    });
+  }
   updateStats();
   document.getElementById('cnt-commandes').textContent=allCommandes.length;
   const urg=allCommandes.filter(c=>c.mode==='Urgent'&&c.status!=='expediee').length;
@@ -799,7 +1142,14 @@ function buildCmdActions(cmd){
   let html='';
   html+=`<button class="btn btn-ghost btn-sm" onclick="viewCommande('${cmd.id}')">👁 Détail</button>`;
   if(cmd.status==='en-attente') html+=`<button class="btn btn-primary btn-sm" onclick="startCommande('${cmd.id}')">▶ Commencer</button>`;
-  if(cmd.status==='en-cours') html+=`<button class="btn btn-success btn-sm" onclick="openValidate('${cmd.id}')">✅ Valider</button>`;
+  if(cmd.status==='en-cours'){
+    const pct = cmd.progress||0;
+    if(pct>=100){
+      html+=`<button class="btn btn-success btn-sm" onclick="openValidate('${cmd.id}')">✅ Valider</button>`;
+    } else {
+      html+=`<button class="btn btn-ghost btn-sm" disabled title="Scannez tous les articles avant de valider" style="opacity:.5;cursor:not-allowed">🔒 Valider (${pct}%)</button>`;
+    }
+  }
   if(cmd.status!=='expediee') html+=`<button class="btn btn-ghost btn-sm" onclick="openPrint('${cmd.id}')">🖨️</button>`;
   if(cmd.status==='expediee') html+=`<button class="btn btn-danger btn-sm" onclick="deleteCommande('${cmd.id}')">🗑️ Supprimer</button>`;
   return html;
@@ -819,14 +1169,27 @@ window.generateDemoCommandes = async function(){
   const batch=[];
   for(let i=0;i<35;i++){
     const shuffled = [...arts].sort(() => Math.random() - 0.5);
-    const art1 = shuffled[0];
-    const art2 = shuffled[1 % shuffled.length];
-    const art3 = shuffled[2 % shuffled.length];
+    const nbArticles = randomInt(3, 10);
+    const lignesArticles = Array.from({ length: nbArticles }, (_, idx) => {
+      const a = shuffled[idx % shuffled.length];
+      return { id: a.id, nom: a.nom, ref: a.ref, qte: randomInt(1, 5), scanned: 0 };
+    });
     const mode = randomEl(MODES), now = new Date();
+    const clientObj = randomEl(CLIENTS);
+
+    // ~1 commande sur 5 part avec une adresse de livraison erronée, à repérer et corriger.
+    let adresseLivraison = clientObj.adresse;
+    let adresseAVerifier = false;
+    if (Math.random() < 0.2) {
+      let autreClient;
+      do { autreClient = randomEl(CLIENTS); } while (autreClient.adresse === clientObj.adresse);
+      adresseLivraison = autreClient.adresse;
+      adresseAVerifier = true;
+    }
 
     const cmd={
       ref:'CMD-'+uid(),
-      client:randomEl(CLIENTS),
+      client:clientObj.nom,
       responsable:randomEl(RESPONSABLES),
       mode,
       status:'en-attente',
@@ -834,12 +1197,9 @@ window.generateDemoCommandes = async function(){
       createdAt:now.getTime(),
       dateStr:now.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),
       tracking:genTracking(),
-      articles:[
-        {id:art1.id,nom:art1.nom,ref:art1.ref,qte:randomInt(1,5),scanned:0},
-        {id:art2.id,nom:art2.nom,ref:art2.ref,qte:randomInt(1,3),scanned:0},
-        {id:art3.id,nom:art3.nom,ref:art3.ref,qte:randomInt(1,4),scanned:0},
-      ],
-      adresse:randomEl(CLIENTS)+', 69000 Lyon',
+      articles: lignesArticles,
+      adresse:adresseLivraison,
+      adresseAVerifier,
       commentaire:mode==='Urgent'?'⚠️ COMMANDE URGENTE — Livraison immédiate requise':'',
       isDemo:true,
     };
@@ -870,15 +1230,40 @@ window.purgeCommandes=async function(){
   loadData(); showToast('Commandes démo supprimées','warn');
 };
 
+window.purgeRetours=async function(){
+  if(!confirm('Supprimer tous les retours de démo ?'))return;
+  if(useFirebase){
+    const snap=await getDocs(collection(db,'retours'));
+    const b=writeBatch(db); snap.forEach(d=>{ if(d.data().isDemo)b.delete(d.ref); }); await b.commit();
+  } else { DATA.retours=DATA.retours.filter(r=>!r.isDemo); saveLocal('retours'); }
+  loadData(); showToast('Retours démo supprimés','warn');
+};
+
+window.purgeReceptions=async function(){
+  if(!confirm('Supprimer toutes les réceptions de démo ?'))return;
+  if(useFirebase){
+    const snap=await getDocs(collection(db,'receptions'));
+    const b=writeBatch(db); snap.forEach(d=>{ if(d.data().isDemo)b.delete(d.ref); }); await b.commit();
+  } else { DATA.receptions=DATA.receptions.filter(r=>!r.isDemo); saveLocal('receptions'); }
+  loadData(); showToast('Réceptions démo supprimées','warn');
+};
+
 window.startCommande=async function(id){
+  const cmd=allCommandes.find(c=>c.id===id); if(!cmd)return;
   const nom=prompt('Nom de l\'élève responsable ?','');
   if(!nom)return;
   await updateCommande(id,{status:'en-cours',responsable:nom});
+  await addHistorique({type:'commande',ref:cmd.ref,client:cmd.client,responsable:nom,icon:'▶',color:'var(--accent)',msg:`Commande ${cmd.ref} prise en charge par ${nom}`});
   showToast('Commande en cours','info'); loadData();
 };
 
 window.openValidate=function(id){
   const cmd=allCommandes.find(c=>c.id===id); if(!cmd)return;
+  const pct = cmd.progress||0;
+  if(pct<100){
+    showToast(`Impossible de valider : seulement ${pct}% des articles ont été scannés`,'error');
+    return;
+  }
   const body=document.getElementById('modal-cmd-body');
   body.innerHTML=`
     <p style="color:var(--dim);margin-bottom:1rem">Confirmer la validation de la commande ?</p>
@@ -898,10 +1283,24 @@ window.openValidate=function(id){
 
 window.validateCommande=async function(id){
   const cmd=allCommandes.find(c=>c.id===id); if(!cmd)return;
+  if((cmd.progress||0)<100){
+    showToast(`Impossible de valider : seulement ${cmd.progress||0}% des articles ont été scannés`,'error');
+    return;
+  }
+  const clientRef=CLIENTS.find(c=>c.nom===cmd.client);
+  const adresseIncorrecte = clientRef ? (clientRef.adresse!==cmd.adresse) : false;
+  if(adresseIncorrecte){
+    showToast('Adresse incorrecte, veuillez modifier l\'adresse avant de valider la commande.','warn',5000);
+    await addHistorique({type:'expedition',ref:cmd.ref,client:cmd.client,responsable:cmd.responsable,icon:'⚠️',color:'var(--red)',msg:`Tentative de validation bloquée : adresse incorrecte sur la commande ${cmd.ref} (Client: ${cmd.client}, Responsable: ${cmd.responsable||'—'})`});
+    closeModal('modal-commande');
+    viewCommande(id);
+    return;
+  }
   const t0=cmd.startedAt||cmd.createdAt||Date.now();
   const elapsed=Math.round((Date.now()-t0)/1000);
   await updateCommande(id,{status:'expediee',progress:100,expediedAt:Date.now()});
-  await addHistorique({type:'expedition',ref:cmd.ref,client:cmd.client,tracking:cmd.tracking,icon:'📤',color:'var(--green)',msg:`Commande ${cmd.ref} expédiée — Client: ${cmd.client}`});
+  await adjustStockForOrder(cmd);
+  await addHistorique({type:'expedition',ref:cmd.ref,client:cmd.client,responsable:cmd.responsable,tracking:cmd.tracking,icon:'📤',color:'var(--green)',msg:`Commande ${cmd.ref} expédiée — Client: ${cmd.client}, Responsable: ${cmd.responsable||'—'}`});
   closeModal('modal-commande');
   playSuccess();
   showFeedback(cmd,elapsed);
@@ -924,16 +1323,33 @@ function showFeedback(cmd,elapsed){
   openModal('modal-feedback');
 }
 
+window.editCommandeAdresse=async function(id){
+  const cmd=allCommandes.find(c=>c.id===id); if(!cmd)return;
+  const nouvelleAdresse=prompt('Corriger l\'adresse de livraison :', cmd.adresse);
+  if(nouvelleAdresse===null) return;
+  const trimmed=nouvelleAdresse.trim();
+  if(!trimmed){ showToast('L\'adresse ne peut pas être vide','error'); return; }
+  if(trimmed===cmd.adresse) return;
+  await updateCommande(id,{adresse:trimmed, adresseAVerifier:false});
+  cmd.adresse=trimmed;
+  cmd.adresseAVerifier=false;
+  await addHistorique({type:'commande',ref:cmd.ref,icon:'✏️',color:'var(--accent2)',msg:`Adresse corrigée sur la commande ${cmd.ref}`});
+  showToast('Adresse mise à jour','success');
+  loadData();
+  viewCommande(id);
+};
+
 window.viewCommande=function(id){
   const cmd=allCommandes.find(c=>c.id===id); if(!cmd)return;
   const rows=cmd.articles.map(a=>`<tr><td>${a.nom}</td><td>${a.ref}</td><td>${Number(a.qte ?? a.qty ?? 0)}</td><td>${a.scanned||0}</td></tr>`).join('');
   document.getElementById('modal-cmd-body').innerHTML=`
+    ${cmd.adresseAVerifier?`<div style="background:rgba(255,68,85,.12);border:1px solid rgba(255,68,85,.35);border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;color:var(--red);font-weight:700;display:flex;align-items:center;gap:.5rem">⚠️ Attention, vérifier l'adresse.</div>`:''}
     <div class="feedback-box" style="margin-bottom:1rem">
       <div class="feedback-stat"><span>Client</span><span>${cmd.client}</span></div>
       <div class="feedback-stat"><span>Mode</span><span>${cmd.mode}</span></div>
       <div class="feedback-stat"><span>Statut</span><span>${statusLabel(cmd.status)}</span></div>
       <div class="feedback-stat"><span>Tracking</span><span class="feedback-val">${cmd.tracking}</span></div>
-      <div class="feedback-stat"><span>Adresse</span><span>${cmd.adresse}</span></div>
+      <div class="feedback-stat"><span>Adresse</span><span style="text-align:right;max-width:65%">${cmd.adresse} <button class="btn btn-ghost btn-sm" style="padding:2px 6px" onclick="editCommandeAdresse('${id}')" title="Corriger l'adresse">✏️</button></span></div>
       ${cmd.commentaire?`<div class="feedback-stat"><span>Commentaire</span><span style="color:var(--yellow)">${cmd.commentaire}</span></div>`:''}
     </div>
     <table class="recap-table"><thead><tr><th>Article</th><th>Réf.</th><th>Qté</th><th>Scanné</th></tr></thead>
@@ -942,7 +1358,7 @@ window.viewCommande=function(id){
   document.getElementById('modal-cmd-actions').innerHTML=`
     <button class="btn btn-ghost" onclick="closeModal('modal-commande')">Fermer</button>
     <button class="btn btn-ghost btn-sm" onclick="openPrint('${id}')">🖨️ Imprimer</button>
-    ${cmd.status==='en-cours'?`<button class="btn btn-success" onclick="openValidate('${id}')">✅ Valider</button>`:''}`;
+    ${cmd.status==='en-cours'?((cmd.progress||0)>=100?`<button class="btn btn-success" onclick="openValidate('${id}')">✅ Valider</button>`:`<button class="btn btn-ghost" disabled title="Scannez tous les articles avant de valider" style="opacity:.5;cursor:not-allowed">🔒 Valider (${cmd.progress||0}%)</button>`):''}`;
   openModal('modal-commande');
 };
 
@@ -1014,7 +1430,7 @@ window.generateDemoRetours = async function(){
     const art = randomEl(arts);
     list.push({
       id:uid(), ref:'RET-'+uid(),
-      article:art.nom, refArt:art.ref, qte:randomInt(1,5),
+      articleId:art.id, article:art.nom, refArt:art.ref, qte:randomInt(1,5),
       motif:randomEl(MOTIFS_RETOUR),
       status:Math.random()>.4?'conforme':'non-conforme',
       createdAt:Date.now()-randomInt(0,86400000),
@@ -1029,21 +1445,43 @@ window.generateDemoRetours = async function(){
   loadData(); showToast('10 retours générés','success');
 };
 
+function retourStatusInfo(r){
+  switch(r.status){
+    case 'conforme': return {label:'Conforme', cls:'conforme'};
+    case 'non-conforme': return {label:'Non conforme', cls:'non-conforme'};
+    case 'quarantaine': return {label:'🔒 Quarantaine', cls:'quarantaine'};
+    case 'contact-fournisseur': return {label:'📞 Contact fournisseur', cls:'contact'};
+    case 'resolue': {
+      const labels={fournisseur:'📤 Renvoyé fournisseur', stock:'📦 Remis en stock', litige:'⚠️ Litige déclaré', detruit:'🗑️ Détruit', cloture:'✅ Clôturé'};
+      return {label:labels[r.action]||'✅ Résolu', cls:'resolue'};
+    }
+    default: return {label:r.status, cls:r.status};
+  }
+}
+
+let filterRetourStatusVal='';
+window.filterRetourStatus=function(v){ filterRetourStatusVal=v; renderRetours(); };
+
 function renderRetours(){
   const tbody=document.getElementById('tbody-retours');
   tbody.innerHTML='';
   document.getElementById('cnt-retours').textContent=allRetours.length;
-  if(!allRetours.length){ tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="es-icon">↩️</div><p>Aucun retour</p></div></td></tr>`; return; }
-  allRetours.forEach(r=>{
-    const statusTag=`<span class="status ${r.status}">${r.status==='conforme'?'Conforme':r.status==='non-conforme'?'Non conforme':r.status==='quarantaine'?'Quarantaine':'Résolu'}</span>`;
+  let list=allRetours;
+  if(filterRetourStatusVal) list=list.filter(r=>r.status===filterRetourStatusVal);
+  if(!list.length){ tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="es-icon">↩️</div><p>Aucun retour</p></div></td></tr>`; return; }
+  list.forEach(r=>{
+    const info=retourStatusInfo(r);
+    const statusTag=`<span class="status ${info.cls}">${info.label}</span>`;
     let actions='';
     if(r.status==='conforme') actions=`
       <button class="btn btn-success btn-sm" onclick="cloturerRetour('${r.id}')">✅ Clôturer</button>
       <button class="btn btn-danger btn-sm" onclick="deleteRetour('${r.id}')">🗑 Supprimer</button>`;
-    else if(r.status==='non-conforme') actions=`
-      <button class="btn btn-warn btn-sm" onclick="actionRetour('${r.id}','quarantaine')">🔒 Quarantaine</button>
+    else if(r.status==='non-conforme'||r.status==='quarantaine'||r.status==='contact-fournisseur') actions=`
+      ${r.status!=='quarantaine'?`<button class="btn btn-warn btn-sm" onclick="actionRetour('${r.id}','quarantaine')">🔒 Quarantaine</button>`:''}
+      <button class="btn btn-ghost btn-sm" onclick="actionRetour('${r.id}','contacter')">${r.fournisseurReponse?'📞 Revoir la réponse':'📞 Contacter'}</button>
       <button class="btn btn-ghost btn-sm" onclick="actionRetour('${r.id}','fournisseur')">📤 Fournisseur</button>
       <button class="btn btn-ghost btn-sm" onclick="actionRetour('${r.id}','stock')">📦 Stock</button>
+      ${r.status==='quarantaine'?`<button class="btn btn-ghost btn-sm" onclick="actionRetour('${r.id}','detruit')">🗑️ Détruire</button>`:''}
       <button class="btn btn-danger btn-sm" onclick="openLitige('${r.id}')">⚠️ Litige</button>
       <button class="btn btn-danger btn-sm" onclick="deleteRetour('${r.id}')">🗑 Supprimer</button>`;
     else actions=`
@@ -1060,15 +1498,45 @@ function renderRetours(){
 }
 
 window.cloturerRetour=async function(id){
-  await updateRetour(id,{status:'resolue'});
+  await updateRetour(id,{status:'resolue',action:'cloture'});
   await addHistorique({type:'retour',ref:id,icon:'↩️',color:'var(--green)',msg:`Retour clôturé (conforme)`});
   showToast('Retour clôturé','success'); loadData();
 };
 window.actionRetour=async function(id,action){
-  const labels={quarantaine:'Mis en quarantaine',fournisseur:'Retourné au fournisseur',stock:'Remis en stock'};
-  await updateRetour(id,{status:action==='quarantaine'?'quarantaine':'resolue',action});
-  await addHistorique({type:'retour',ref:id,icon:'↩️',color:'var(--yellow)',msg:`Retour — ${labels[action]}`});
-  showToast(labels[action],'warn'); loadData();
+  const labels={quarantaine:'Mis en quarantaine',fournisseur:'Retourné au fournisseur',stock:'Remis en stock',detruit:'Article détruit',contacter:'Fournisseur contacté'};
+  const ret=allRetours.find(r=>r.id===id);
+  const updateData = action==='contacter'
+    ? {status:'contact-fournisseur', action:'contacter'}
+    : {status:action==='quarantaine'?'quarantaine':'resolue', action};
+
+  let reponse=null;
+  let dejaContacte=false;
+  if(action==='contacter'){
+    if(ret && ret.fournisseurReponse){
+      reponse = ret.fournisseurReponse;
+      dejaContacte = true;
+    } else {
+      const pool = REPONSES_FOURNISSEUR_RETOUR[ret?.motif] || REPONSES_FOURNISSEUR_RETOUR['Article défectueux'];
+      reponse = randomEl(pool);
+      updateData.fournisseurReponse = reponse;
+    }
+  }
+
+  await updateRetour(id,updateData);
+  if(action==='stock' && ret && ret.articleId) await adjustStock(ret.articleId, ret.qte);
+  await addHistorique({type:'retour',ref:id,icon:'↩️',color:'var(--yellow)',msg:`Retour — ${labels[action]}${dejaContacte?' (réponse déjà obtenue, rappel)':''}`});
+  showToast(dejaContacte?'Vous avez déjà contacté ce fournisseur — voici sa réponse':labels[action],'warn'); loadData();
+
+  if(action==='contacter' && ret){
+    document.getElementById('modal-fournisseur-reponse-body').innerHTML=`
+      <div class="feedback-box">
+        <div class="feedback-stat"><span>Article</span><span>${ret.article||'—'}</span></div>
+        <div class="feedback-stat"><span>Motif du retour</span><span>${ret.motif||'—'}</span></div>
+      </div>
+      ${dejaContacte?`<p style="margin-top:.75rem;color:var(--dim);font-size:.8rem">📌 Vous avez déjà contacté le fournisseur pour ce retour — voici de nouveau sa réponse.</p>`:''}
+      <p style="margin-top:1rem;padding:1rem;background:var(--panel2);border:1px solid var(--border);border-radius:10px;line-height:1.5">${reponse}</p>`;
+    openModal('modal-fournisseur-reponse');
+  }
 };
 
 let currentLittigeId='';
@@ -1077,7 +1545,7 @@ window.submitLitige=async function(){
   const type=document.getElementById('litige-type').value;
   const desc=document.getElementById('litige-desc').value;
   const gravity=document.getElementById('litige-gravity').value;
-  await updateRetour(currentLittigeId,{status:'resolue',litige:{type,desc,gravity,createdAt:Date.now()}});
+  await updateRetour(currentLittigeId,{status:'resolue',action:'litige',litige:{type,desc,gravity,createdAt:Date.now()}});
   await addHistorique({type:'litige',ref:currentLittigeId,icon:'⚠️',color:'var(--red)',msg:`Litige signalé: ${type} (${gravity})`});
   closeModal('modal-litige'); showToast('Litige enregistré','error'); loadData();
 };
@@ -1086,6 +1554,20 @@ async function updateRetour(id,data){
   if(useFirebase) await updateDoc(doc(db,'retours',id),data);
   else { const r=DATA.retours.find(r=>r.id===id); if(r){ Object.assign(r,data); saveLocal('retours'); } }
 }
+
+window.deleteRetour = async function(id){
+  if(!confirm('Supprimer définitivement ce retour ?')) return;
+
+  if(useFirebase){
+    await deleteDoc(doc(db,'retours',id));
+  } else {
+    DATA.retours = DATA.retours.filter(r => r.id !== id);
+    saveLocal('retours');
+  }
+
+  loadData();
+  showToast('Retour supprimé', 'success');
+};
 
 // ══ RECEPTIONS ══
 let allReceptions=[];
@@ -1097,13 +1579,35 @@ window.generateDemoReceptions = async function(){
   const list=[];
   for(let i=0;i<10;i++){
     const picked = [...arts].sort(() => Math.random() - 0.5).slice(0, randomInt(1, 3));
+    const articlesDetail = picked.map(a => ({ id:a.id, nom:a.nom, ref:a.ref, qte: randomInt(1,10) }));
+    const qteAttendue = articlesDetail.reduce((s,a)=>s+a.qte,0);
+    const fournObj = randomEl(FOURNISSEURS);
+    const estConforme = Math.random()>.35;
+    const motifNC = estConforme ? null : genMotifNonConforme(qteAttendue);
+
+    // ~1 réception sur 5 indique une adresse fournisseur erronée, à repérer et corriger.
+    let adresseFournisseur = fournObj.adresse;
+    let adresseAVerifier = false;
+    if (Math.random() < 0.2) {
+      let autreFourn;
+      do { autreFourn = randomEl(FOURNISSEURS); } while (autreFourn.adresse === fournObj.adresse);
+      adresseFournisseur = autreFourn.adresse;
+      adresseAVerifier = true;
+    }
+
     list.push({
       id:uid(),
       ref:'REC-'+uid(),
-      fournisseur:randomEl(FOURNISSEURS),
+      fournisseur:fournObj.nom,
+      fournisseurAdresse:adresseFournisseur,
+      fournisseurTelephone:fournObj.telephone,
+      fournisseurEmail:fournObj.email,
+      adresseAVerifier,
       articles:picked.map(a => a.nom).join(', '),
-      qteAttendue:randomInt(1,20),
-      status:Math.random()>.35?'conforme':'non-conforme',
+      articlesDetail,
+      qteAttendue,
+      status: estConforme ? 'conforme' : 'non-conforme',
+      motifNC,
       createdAt:Date.now()-randomInt(0,43200000),
       isDemo:true,
     });
@@ -1116,11 +1620,18 @@ window.generateDemoReceptions = async function(){
   loadData(); showToast('10 réceptions générées','success');
 };
 
+let articlesSearchVal='';
+let articlesCatVal='';
+let articlesStockVal='';
+window.filterArticlesWMS=function(v){ articlesSearchVal=v; loadArticlesWMS(); };
+window.filterArticlesCatWMS=function(v){ articlesCatVal=v; loadArticlesWMS(); };
+window.filterArticlesStockWMS=function(v){ articlesStockVal=v; loadArticlesWMS(); };
+
 window.loadArticlesWMS = function(){
   const c = document.getElementById('articlesWMSContainer');
   if(!c) return;
 
-  const list = (ARTICLES || []).map(a => ({
+  let list = (ARTICLES || []).map(a => ({
     ...a,
     nom: (a.nom ?? '').trim(),
     ref: (a.ref ?? '').trim(),
@@ -1128,6 +1639,24 @@ window.loadArticlesWMS = function(){
     prix: Number(a.prix ?? 0),
     stock: Number(a.stock ?? 0)
   })).filter(a => a.nom && a.ref && a.cat);
+
+  // Peuple le filtre catégorie une seule fois (sans écraser la sélection en cours)
+  const catSelect = document.getElementById('articles-cat-filter');
+  if(catSelect){
+    const allCats = [...new Set(list.map(a => a.cat))].sort();
+    const current = catSelect.value;
+    catSelect.innerHTML = '<option value="">Toutes les catégories</option>' + allCats.map(cat=>`<option value="${cat}">${cat}</option>`).join('');
+    catSelect.value = allCats.includes(current) ? current : '';
+  }
+
+  if(articlesSearchVal){
+    const q=articlesSearchVal.toLowerCase();
+    list = list.filter(a => (a.nom+a.ref).toLowerCase().includes(q));
+  }
+  if(articlesCatVal) list = list.filter(a => a.cat === articlesCatVal);
+  if(articlesStockVal) list = list.filter(a => stockClass(a.stock) === 'stock-'+articlesStockVal);
+
+  if(!list.length){ c.innerHTML='<div class="empty-state"><div class="es-icon">🔍</div><p>Aucun article trouvé</p></div>'; return; }
 
   const cats = [...new Set(list.map(a => a.cat))].sort();
 
@@ -1141,7 +1670,7 @@ window.loadArticlesWMS = function(){
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:1rem;">
               <div style="font-weight:700;color:#fff;">${a.nom}</div>
               <div style="font-family:monospace;color:var(--accent2);font-size:.8rem;">${a.ref}</div>
-              <div style="margin-top:.35rem;color:var(--dim);font-size:.8rem;">Stock: ${a.stock} • ${a.prix} €</div>
+              <div style="margin-top:.35rem;color:var(--dim);font-size:.8rem;">Stock: <span class="${stockClass(a.stock)}">${a.stock}</span> • ${a.prix} €</div>
               <div style="font-size:.7rem;color:var(--dim);">ID: ${a.id}</div>
               <div style="margin-top:.75rem;">
                 <button class="btn btn-danger btn-sm" onclick="deleteArticle('${a.id}', event)">🗑 Supprimer</button>
@@ -1154,45 +1683,212 @@ window.loadArticlesWMS = function(){
   }).join('');
 }
 
+// ══ Fournisseurs (lecture seule) ══
+let fournisseursSearchVal='';
+window.filterFournisseursWMS=function(v){ fournisseursSearchVal=v; loadFournisseursWMS(); };
+
+window.loadFournisseursWMS = function(){
+  const c = document.getElementById('fournisseursWMSContainer');
+  if(!c) return;
+
+  let list = [...FOURNISSEURS].sort((a,b)=>a.nom.localeCompare(b.nom));
+  if(fournisseursSearchVal){
+    const q=fournisseursSearchVal.toLowerCase();
+    list = list.filter(f => (f.nom+f.adresse+f.telephone+f.email).toLowerCase().includes(q));
+  }
+
+  if(!list.length){ c.innerHTML='<div class="empty-state"><div class="es-icon">🏭</div><p>Aucun fournisseur trouvé</p></div>'; return; }
+
+  c.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;">
+    ${list.map(f => `
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+        <div style="font-weight:700;color:#fff;">${f.nom}</div>
+        <div style="margin-top:.35rem;color:var(--dim);font-size:.8rem;">📍 ${f.adresse}</div>
+        <div style="margin-top:.25rem;color:var(--dim);font-size:.8rem;">📞 ${f.telephone}</div>
+        <div style="margin-top:.25rem;color:var(--accent2);font-size:.8rem;">✉️ ${f.email}</div>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+// ══ Clients (lecture seule) ══
+let clientsSearchVal='';
+window.filterClientsWMS=function(v){ clientsSearchVal=v; loadClientsWMS(); };
+
+window.loadClientsWMS = function(){
+  const c = document.getElementById('clientsWMSContainer');
+  if(!c) return;
+
+  let list = [...CLIENTS].sort((a,b)=>a.nom.localeCompare(b.nom));
+  if(clientsSearchVal){
+    const q=clientsSearchVal.toLowerCase();
+    list = list.filter(cl => (cl.nom+cl.adresse).toLowerCase().includes(q));
+  }
+
+  if(!list.length){ c.innerHTML='<div class="empty-state"><div class="es-icon">👥</div><p>Aucun client trouvé</p></div>'; return; }
+
+  c.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;">
+    ${list.map(cl => `
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+        <div style="font-weight:700;color:#fff;">${cl.nom}</div>
+        <div style="margin-top:.35rem;color:var(--dim);font-size:.8rem;">📍 ${cl.adresse}</div>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function receptionStatusInfo(r){
+  const motifLabel = r.motifNC ? r.motifNC.label : null;
+  switch(r.status){
+    case 'conforme': return {label:'Conforme', cls:'conforme'};
+    case 'non-conforme': return {label: motifLabel || 'Non conforme', cls:'non-conforme'};
+    case 'attente': return {label:`⏳ En attente${motifLabel?' — '+motifLabel:''}`, cls:'attente'};
+    case 'contact-fournisseur': return {label:`📞 Contact fournisseur${motifLabel?' — '+motifLabel:''}`, cls:'contact'};
+    case 'refusee': return {label:`🚫 Refusée${motifLabel?' — '+motifLabel:''}`, cls:'refusee'};
+    case 'resolue': {
+      const labels={valide:'✅ Entrée en stock', reserve:'📋 Accepté avec réserve'};
+      const base=labels[r.action]||'✅ Résolu';
+      return {label: motifLabel && r.action==='reserve' ? `${base} — ${motifLabel}` : base, cls:'resolue'};
+    }
+    default: return {label:r.status, cls:r.status};
+  }
+}
+
+let filterReceptionStatusVal='';
+window.filterReceptionStatus=function(v){ filterReceptionStatusVal=v; renderReceptions(); };
+
 function renderReceptions(){
   const tbody=document.getElementById('tbody-receptions');
   tbody.innerHTML=''; document.getElementById('cnt-reception').textContent=allReceptions.length;
-  if(!allReceptions.length){ tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="es-icon">🚚</div><p>Aucune réception</p></div></td></tr>`; return; }
-  allReceptions.forEach(r=>{
-    const statusTag=`<span class="status ${r.status}">${r.status==='conforme'?'Conforme':r.status==='non-conforme'?'Non conforme':r.status}</span>`;
-    let actions='';
-    if(r.status==='conforme') actions=`<button class="btn btn-success btn-sm" onclick="validerReception('${r.id}')">✅ Valider entrée stock</button>`;
-    else if(r.status==='non-conforme') actions=`
+  let list=allReceptions;
+  if(filterReceptionStatusVal) list=list.filter(r=>r.status===filterReceptionStatusVal);
+  if(!list.length){ tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="es-icon">🚚</div><p>Aucune réception</p></div></td></tr>`; return; }
+  list.forEach(r=>{
+    const info=receptionStatusInfo(r);
+    const statusTag=`<span class="status ${info.cls}">${info.label}</span>`;
+    let actions=`<button class="btn btn-ghost btn-sm" onclick="viewReception('${r.id}')">👁 Détail</button>`;
+    if(r.status==='conforme') actions+=`<button class="btn btn-success btn-sm" onclick="validerReception('${r.id}')">✅ Valider entrée stock</button>`;
+    else if(r.status==='non-conforme'||r.status==='attente'||r.status==='contact-fournisseur') actions+=`
       <button class="btn btn-danger btn-sm" onclick="actionReception('${r.id}','refuse')">🚫 Refuser</button>
       <button class="btn btn-warn btn-sm" onclick="actionReception('${r.id}','reserve')">📋 Avec réserve</button>
-      <button class="btn btn-ghost btn-sm" onclick="actionReception('${r.id}','attente')">⏳ Attente</button>
-      <button class="btn btn-ghost btn-sm" onclick="actionReception('${r.id}','contact')">📞 Contacter</button>`;
-    else actions=`<span style="color:var(--green);font-size:.8rem">✅ Traité</span>`;
+      ${r.status!=='attente'?`<button class="btn btn-ghost btn-sm" onclick="actionReception('${r.id}','attente')">⏳ Attente</button>`:''}
+      <button class="btn btn-ghost btn-sm" onclick="actionReception('${r.id}','contact')">${r.fournisseurReponse?'📞 Revoir la réponse':'📞 Contacter'}</button>`;
+    else if(r.status==='refusee') actions+=`<span style="color:var(--red);font-size:.8rem">🚫 Refusée</span>`;
+    else actions+=`<span style="color:var(--green);font-size:.8rem">✅ Traité</span>`;
+    actions+=`<button class="btn btn-danger btn-sm" onclick="deleteReception('${r.id}')">🗑 Supprimer</button>`;
+    const articlesLabel = Array.isArray(r.articlesDetail) && r.articlesDetail.length
+      ? r.articlesDetail.map(a=>`${a.nom} (×${a.qte})`).join(', ')
+      : (r.articles||'—');
+    const adresseWarn = r.adresseAVerifier ? ` <span style="color:var(--red);font-size:.75rem" title="Attention, vérifier l'adresse.">⚠️</span>` : '';
     tbody.innerHTML+=`<tr>
       <td><span class="cmd-ref">${r.ref}</span></td>
-      <td>${r.fournisseur}</td><td style="font-size:.78rem">${r.articles}</td>
+      <td>${r.fournisseur}${adresseWarn}</td><td style="font-size:.78rem">${articlesLabel}</td>
       <td>${r.qteAttendue}</td><td>${statusTag}</td>
       <td><div class="actions-cell">${actions}</div></td>
     </tr>`;
   });
 }
 
+window.editReceptionAdresse=async function(id){
+  const r=allReceptions.find(r=>r.id===id); if(!r)return;
+  const nouvelleAdresse=prompt('Corriger l\'adresse du fournisseur :', r.fournisseurAdresse||'');
+  if(nouvelleAdresse===null) return;
+  const trimmed=nouvelleAdresse.trim();
+  if(!trimmed){ showToast('L\'adresse ne peut pas être vide','error'); return; }
+  if(trimmed===r.fournisseurAdresse) return;
+  await updateReception(id,{fournisseurAdresse:trimmed, adresseAVerifier:false});
+  r.fournisseurAdresse=trimmed;
+  r.adresseAVerifier=false;
+  await addHistorique({type:'reception',ref:r.ref,icon:'✏️',color:'var(--accent2)',msg:`Adresse fournisseur corrigée sur la réception ${r.ref}`});
+  showToast('Adresse mise à jour','success');
+  loadData();
+  viewReception(id);
+};
+
+window.viewReception=function(id){
+  const r=allReceptions.find(r=>r.id===id); if(!r)return;
+  const refFournisseur = FOURNISSEURS.find(f=>f.nom===r.fournisseur);
+  const adresseMatch = refFournisseur ? (refFournisseur.adresse===r.fournisseurAdresse) : null;
+  const rows=(r.articlesDetail||[]).map(a=>`<tr><td>${a.nom}</td><td>${a.ref}</td><td>${a.qte}</td></tr>`).join('');
+  document.getElementById('modal-reception-body').innerHTML=`
+    ${r.adresseAVerifier?`<div style="background:rgba(255,68,85,.12);border:1px solid rgba(255,68,85,.35);border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;color:var(--red);font-weight:700;display:flex;align-items:center;gap:.5rem">⚠️ Attention, vérifier l'adresse.</div>`:''}
+    <div class="feedback-box" style="margin-bottom:1rem">
+      <div class="feedback-stat"><span>Fournisseur</span><span>${r.fournisseur||'—'}</span></div>
+      <div class="feedback-stat"><span>Adresse indiquée</span><span style="text-align:right;max-width:65%">${r.fournisseurAdresse||'—'} <button class="btn btn-ghost btn-sm" style="padding:2px 6px" onclick="editReceptionAdresse('${id}')" title="Corriger l'adresse">✏️</button></span></div>
+      <div class="feedback-stat"><span>Téléphone</span><span>${r.fournisseurTelephone||'—'}</span></div>
+      <div class="feedback-stat"><span>Email</span><span>${r.fournisseurEmail||'—'}</span></div>
+      ${refFournisseur?`<div class="feedback-stat"><span>Conformité adresse</span><span style="color:${adresseMatch?'var(--green)':'var(--red)'}">${adresseMatch?'✅ Correspond à la fiche fournisseur':'⚠️ Ne correspond pas à la fiche fournisseur'}</span></div>`:''}
+      ${r.motifNC?`<div class="feedback-stat"><span>Motif de non-conformité</span><span style="color:var(--red)">${r.motifNC.label}</span></div>`:''}
+    </div>
+    ${r.fournisseurReponse?`<div class="feedback-box" style="margin-bottom:1rem"><h4 style="margin-bottom:.5rem">📞 Dernière réponse du fournisseur</h4><p style="line-height:1.5">${r.fournisseurReponse}</p></div>`:''}
+    <table class="recap-table"><thead><tr><th>Article</th><th>Réf.</th><th>Qté</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+  openModal('modal-reception-detail');
+};
+
 window.validerReception=async function(id){
   if(!confirm('Confirmer l\'entrée en stock ?'))return;
-  await updateReception(id,{status:'resolue',validatedAt:Date.now()});
+  const rec=allReceptions.find(r=>r.id===id);
+  await updateReception(id,{status:'resolue',action:'valide',validatedAt:Date.now()});
+  if(rec) await adjustStockForReception(rec);
   await addHistorique({type:'reception',ref:id,icon:'🚚',color:'var(--green)',msg:`Réception validée — Entrée en stock`});
   showToast('Réception validée, stock mis à jour','success'); loadData();
 };
 window.actionReception=async function(id,action){
   const labels={refuse:'Livraison refusée',reserve:'Accepté avec réserve',attente:'Mis en attente',contact:'Fournisseur contacté'};
-  await updateReception(id,{status:'resolue',action});
-  await addHistorique({type:'reception',ref:id,icon:'🚚',color:'var(--yellow)',msg:`Réception — ${labels[action]}`});
-  showToast(labels[action],'warn'); loadData();
+  const statusMap={refuse:'refusee',reserve:'resolue',attente:'attente',contact:'contact-fournisseur'};
+  const rec=allReceptions.find(r=>r.id===id);
+  const updateData={status:statusMap[action],action};
+
+  let reponse=null;
+  let dejaContacte=false;
+  if(action==='contact'){
+    if(rec && rec.fournisseurReponse){
+      // Le fournisseur a déjà été contacté : on rappelle la MÊME réponse, on ne retire pas au hasard.
+      reponse = rec.fournisseurReponse;
+      dejaContacte = true;
+    } else {
+      const type = rec?.motifNC?.type || 'incorrects';
+      const pool = REPONSES_FOURNISSEUR[type] || REPONSES_FOURNISSEUR.incorrects;
+      reponse = randomEl(pool);
+      updateData.fournisseurReponse = reponse;
+    }
+  }
+
+  await updateReception(id,updateData);
+  if(action==='reserve' && rec) await adjustStockForReception(rec);
+  await addHistorique({type:'reception',ref:id,icon:'🚚',color:'var(--yellow)',msg:`Réception — ${labels[action]}${dejaContacte?' (réponse déjà obtenue, rappel)':''}`});
+  showToast(dejaContacte?'Vous avez déjà contacté ce fournisseur — voici sa réponse':labels[action],'warn'); loadData();
+
+  if(action==='contact' && rec){
+    document.getElementById('modal-fournisseur-reponse-body').innerHTML=`
+      <div class="feedback-box">
+        <div class="feedback-stat"><span>Fournisseur</span><span>${rec.fournisseur||'—'}</span></div>
+        <div class="feedback-stat"><span>Concernant</span><span>${rec.motifNC?rec.motifNC.label:'—'}</span></div>
+      </div>
+      ${dejaContacte?`<p style="margin-top:.75rem;color:var(--dim);font-size:.8rem">📌 Vous avez déjà contacté ce fournisseur pour cette réception — voici de nouveau sa réponse.</p>`:''}
+      <p style="margin-top:1rem;padding:1rem;background:var(--panel2);border:1px solid var(--border);border-radius:10px;line-height:1.5">${reponse}</p>`;
+    openModal('modal-fournisseur-reponse');
+  }
 };
 async function updateReception(id,data){
   if(useFirebase) await updateDoc(doc(db,'receptions',id),data);
   else { const r=DATA.receptions.find(r=>r.id===id); if(r){ Object.assign(r,data); saveLocal('receptions'); } }
 }
+
+window.deleteReception = async function(id){
+  if(!confirm('Supprimer définitivement cette réception ?')) return;
+
+  if(useFirebase){
+    await deleteDoc(doc(db,'receptions',id));
+  } else {
+    DATA.receptions = DATA.receptions.filter(r => r.id !== id);
+    saveLocal('receptions');
+  }
+
+  loadData();
+  showToast('Réception supprimée', 'success');
+};
 
 // ══ HISTORIQUE ══
 let allHistorique=[];
@@ -1217,19 +1913,22 @@ window.filterHistorique=function(v){
 function renderHistorique(list){
   const el=document.getElementById('hist-list');
   if(!list.length){ el.innerHTML='<div class="empty-state"><div class="es-icon">📋</div><p>Historique vide</p></div>'; return; }
-  el.innerHTML=list.slice(0,200).map(h=>{
+  el.innerHTML=list.slice(0,200).map((h,i)=>{
     const d=new Date(h.createdAt||Date.now());
     const timeStr=d.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     return `<div class="hist-entry">
       <div class="hist-icon" style="background:${h.color||'var(--border)'}22;color:${h.color||'var(--text)'}">${h.icon||'📌'}</div>
       <div class="hist-content">
-        <div class="hist-title">${h.msg||'—'}</div>
-        ${h.ref?`<div class="hist-detail">Réf: ${h.ref}</div>`:''}
+        <div class="hist-title">${escapeHTML(h.msg)||'—'}</div>
+        ${h.ref?`<div class="hist-detail">Réf: ${escapeHTML(h.ref)}</div>`:''}
       </div>
       <div class="hist-time">${timeStr}</div>
-      <button class="btn btn-ghost btn-sm" onclick='showHistDetails(${JSON.stringify(h).replace(/'/g,"&#39;")})'>👁️ Détails</button>
+      <button class="btn btn-ghost btn-sm" data-hist-idx="${i}">👁️ Détails</button>
     </div>`;
   }).join('');
+  el.querySelectorAll('[data-hist-idx]').forEach(btn=>{
+    btn.addEventListener('click', ()=> showHistDetails(list[Number(btn.dataset.histIdx)]));
+  });
 }
 window.clearHistorique=async function(){
   if(!confirm('Effacer tout l\'historique ?'))return;
@@ -1245,10 +1944,10 @@ window.showHistDetails=function(entry){
     .map(([key,val]) => {
       let displayVal = val;
       if(key === 'createdAt') displayVal = new Date(val).toLocaleString('fr-FR');
-      if(typeof val === 'object' && val !== null) displayVal = JSON.stringify(val, null, 2);
+      else if(typeof val === 'object' && val !== null) displayVal = JSON.stringify(val, null, 2);
       return `<div style="display:flex;justify-content:space-between;gap:1rem;padding:.4rem 0;border-bottom:1px solid var(--border)">
-        <span style="color:var(--dim);font-size:.8rem">${key}</span>
-        <span style="font-size:.85rem;text-align:right;word-break:break-word">${displayVal}</span>
+        <span style="color:var(--dim);font-size:.8rem">${escapeHTML(key)}</span>
+        <span style="font-size:.85rem;text-align:right;word-break:break-word;white-space:pre-wrap">${escapeHTML(displayVal)}</span>
       </div>`;
     }).join('');
 
@@ -1368,13 +2067,29 @@ window.loadScenario = async function (level) {
     const recList = [];
 
     for (let i = 0; i < cfg.cmds; i++) {
-      const arts = [pickArticle(), pickArticle(), pickArticle()];
+      const nbArticles = randomInt(3, 10);
+      const arts = Array.from({ length: nbArticles }, pickArticle);
       const mode = level === 'expert' && i < 5 ? 'Urgent' : level === 'advanced' && i < 3 ? 'Urgent' : randomEl(MODES);
+      const clientObj = randomEl(CLIENTS);
+
+      // Scénarios avancé/expert : ~1 commande sur 5 part avec une adresse de livraison erronée,
+      // signalée par un commentaire d'avertissement à repérer et corriger par le stagiaire
+      // en comparant avec l'onglet Clients.
+      let adresseLivraison = clientObj.adresse;
+      let adresseAVerifier = false;
+      if (level === 'advanced' || level === 'expert') {
+        if (Math.random() < 0.2) {
+          let autreClient;
+          do { autreClient = randomEl(CLIENTS); } while (autreClient.adresse === clientObj.adresse);
+          adresseLivraison = autreClient.adresse;
+          adresseAVerifier = true;
+        }
+      }
 
       cmdList.push({
         id: uid(),
         ref: 'CMD-' + uid(),
-        client: randomEl(CLIENTS),
+        client: clientObj.nom,
         responsable: '',
         mode,
         status: 'en-attente',
@@ -1394,8 +2109,9 @@ window.loadScenario = async function (level) {
           qte: randomInt(1, 5),
           scanned: 0
         })),
-        adresse: randomEl(CLIENTS) + ', France',
-        commentaire: level === 'advanced' && Math.random() > 0.6 ? '⚠️ Adresse à vérifier' : '',
+        adresse: adresseLivraison,
+        adresseAVerifier,
+        commentaire: '',
         isDemo: true,
       });
     }
@@ -1405,6 +2121,7 @@ window.loadScenario = async function (level) {
       retList.push({
         id: uid(),
         ref: 'RET-' + uid(),
+        articleId: art.id,
         article: art.nom,
         refArt: art.ref,
         qte: randomInt(1, 5),
@@ -1418,13 +2135,42 @@ window.loadScenario = async function (level) {
     for (let i = 0; i < cfg.receps; i++) {
       const art = pickArticle();
       const art2 = pickArticle();
+      const qteA = randomInt(5, 50);
+      const qteB = randomInt(5, 50);
+      const fournObj = randomEl(FOURNISSEURS);
+      const qteAttendueRec = qteA + qteB;
+      const estConformeRec = Math.random() > cfg.ncRatio;
+
+      // Scénarios avancé/expert : ~1 réception sur 5 indique une adresse fournisseur erronée,
+      // signalée par un commentaire d'avertissement à repérer et corriger par le stagiaire
+      // en comparant avec l'onglet Clients & Fournisseurs.
+      let adresseFournisseurRec = fournObj.adresse;
+      let adresseAVerifierRec = false;
+      if (level === 'advanced' || level === 'expert') {
+        if (Math.random() < 0.2) {
+          let autreFourn;
+          do { autreFourn = randomEl(FOURNISSEURS); } while (autreFourn.adresse === fournObj.adresse);
+          adresseFournisseurRec = autreFourn.adresse;
+          adresseAVerifierRec = true;
+        }
+      }
+
       recList.push({
         id: uid(),
         ref: 'REC-' + uid(),
-        fournisseur: randomEl(FOURNISSEURS),
+        fournisseur: fournObj.nom,
+        fournisseurAdresse: adresseFournisseurRec,
+        fournisseurTelephone: fournObj.telephone,
+        fournisseurEmail: fournObj.email,
+        adresseAVerifier: adresseAVerifierRec,
         articles: `${art.nom}, ${art2.nom}`,
-        qteAttendue: randomInt(10, 100),
-        status: Math.random() > cfg.ncRatio ? 'conforme' : 'non-conforme',
+        articlesDetail: [
+          { id: art.id, nom: art.nom, ref: art.ref, qte: qteA },
+          { id: art2.id, nom: art2.nom, ref: art2.ref, qte: qteB }
+        ],
+        qteAttendue: qteAttendueRec,
+        status: estConformeRec ? 'conforme' : 'non-conforme',
+        motifNC: estConformeRec ? null : genMotifNonConforme(qteAttendueRec),
         createdAt: now - randomInt(0, 21600000),
         isDemo: true,
       });
@@ -1514,11 +2260,23 @@ function updateCamIndicator(status,msg){
   setTimeout(()=>{ el.className='cam-indicator waiting'; el.textContent='🔍 Prêt à scanner'; },1000);
 }
 
+function showStockVideAlert(nomArticle){
+  document.getElementById('modal-stock-vide-msg').textContent = `Le stock de "${nomArticle}" est à 0. Impossible de scanner cet article tant qu'il n'a pas été réapprovisionné.`;
+  openModal('modal-stock-vide');
+}
+
 window.simulateScan=function(){
   if(!scanOrderData){ showToast('Sélectionnez une commande d\'abord','warn'); return; }
   const pending=scanOrderData.articles.filter(a=>a.scanned<Number(a.qte ?? a.qty ?? 0));
   if(!pending.length){ showToast('Tous les articles sont déjà scannés !','info'); return; }
-  const art=pending[Math.floor(Math.random()*pending.length)];
+  const inStock = pending.filter(a=>{ const art=ARTICLES.find(x=>x.id===a.id); return Number(art?.stock ?? 0) > 0; });
+  if(!inStock.length){
+    flashCam('red');
+    updateCamIndicator('fail','📭 Stock épuisé');
+    showStockVideAlert(pending[0].nom);
+    return;
+  }
+  const art=inStock[Math.floor(Math.random()*inStock.length)];
   art.scanned=(art.scanned||0)+1;
   flashCam('green'); playSuccess();
   updateCamIndicator('success',`✅ Article scanné`);
@@ -1530,9 +2288,9 @@ window.simulateScan=function(){
 
 function populateScanSelect(){
   const sel=document.getElementById('scan-order-select');
-  const pendingCmds=allCommandes.filter(c=>c.status==='en-cours'||c.status==='en-attente');
+  const pendingCmds=allCommandes.filter(c=>c.status==='en-cours' && (c.responsable||'').trim());
   sel.innerHTML='<option value="">— Choisir une commande —</option>';
-  pendingCmds.forEach(c=>{ sel.innerHTML+=`<option value="${c.id}">${c.ref} — ${c.client} (${c.mode})</option>`; });
+  pendingCmds.forEach(c=>{ sel.innerHTML+=`<option value="${c.id}">${c.ref} — ${c.client} (${c.mode}) — ${c.responsable}</option>`; });
 }
 
 window.loadScanOrder=function(){
@@ -1635,6 +2393,15 @@ function processScannedCode(code){
     document.getElementById('scan-msg').className = 'scan-msg err';
     return;
   }
+  const stockArt = ARTICLES.find(x=>x.id===art.id);
+  if(Number(stockArt?.stock ?? 0) <= 0){
+    flashCam('red');
+    updateCamIndicator('fail','📭 Stock épuisé');
+    document.getElementById('scan-msg').textContent = `📭 Stock épuisé pour ${art.nom}`;
+    document.getElementById('scan-msg').className = 'scan-msg err';
+    showStockVideAlert(art.nom);
+    return;
+  }
   art.scanned = (art.scanned||0) + 1;
   flashCam('green'); playSuccess();
   updateCamIndicator('success','✅ Article scanné');
@@ -1689,22 +2456,16 @@ async function loadData(){
 }
 
 let knownUrgentIds=new Set();
+let isFirstUrgentCheck=true;
 function checkUrgentNotif(){
   const newUrg=allCommandes.filter(c=>c.mode==='Urgent'&&c.status!=='expediee');
   newUrg.forEach(c=>{
     if(!knownUrgentIds.has(c.id)){
       knownUrgentIds.add(c.id);
-      if(knownUrgentIds.size>1){ playUrgent(); showToast(`🚨 Nouvelle commande urgente: ${c.ref}`,'error',5000); }
+      if(!isFirstUrgentCheck){ playUrgent(); showToast(`🚨 Nouvelle commande urgente: ${c.ref}`,'error',5000); }
     }
   });
-}
-
-// ══ Firebase realtime listener ══
-function setupListeners(){
-  if(!useFirebase)return;
-  try{
-    onSnapshot(collection(db,'commandes'),()=>loadData());
-  }catch(e){}
+  isFirstUrgentCheck=false;
 }
 
 // ══ Modal helpers ══
@@ -1753,9 +2514,9 @@ window.importArticlesJSON = async function(input) {
 // ══ INIT ══
 (async function init(){
   restoreScenarioState();
+  await ensureRefData();
   await loadData();
   await loadHistorique();
-  setupListeners();
   // Auto-poll si pas Firebase
   if(!useFirebase) setInterval(loadData, 10000);
   // Check urgent messages from demande.html
@@ -1786,7 +2547,7 @@ window.saveNewArticle = async function(){
   const ref = document.getElementById('add-ref').value.trim().toUpperCase();
   const cat = document.getElementById('add-cat').value.trim();
   const prix = parseFloat(document.getElementById('add-prix').value || '0');
-  const stock = parseInt(document.getElementById('add-stock').value || '0', 10);
+  const stock = Math.max(0, parseInt(document.getElementById('add-stock').value || '0', 10));
   
   // ... garde le reste de ta fonction (le if(!nom...), le await addDoc..., etc.)
   if (!nom || !ref || prix <= 0 || !cat) {
@@ -1838,7 +2599,7 @@ window.saveNewArticle = async function(){
       <input id="add-ref" placeholder="Référence (ex: PAP-A4)" style="padding:.6rem;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:#fff;">
       <input id="add-prix" type="number" step="0.01" placeholder="Prix €" style="padding:.6rem;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:#fff;">
       <input id="add-cat" placeholder="Catégorie" style="padding:.6rem;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:#fff;">
-      <input id="add-stock" type="number" placeholder="Stock" style="padding:.6rem;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:#fff;">
+      <input id="add-stock" type="number" min="0" placeholder="Stock" style="padding:.6rem;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:#fff;">
       <button onclick="saveNewArticle()" style="background:var(--green);color:#000;border:none;border-radius:8px;padding:1rem;font-weight:700;cursor:pointer;">
         💾 Ajouter l'article
       </button>
