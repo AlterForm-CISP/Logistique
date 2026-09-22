@@ -8,26 +8,36 @@
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;500;600;800&display=swap" rel="stylesheet"/>
 <style>
 :root{
-  --bg:#0a0e1a; --panel:#111827; --panel2:#0d1520;
-  --border:#1e3a5f; --border2:#243b55;
+  --bg:#1c2333; --panel:#28324a; --panel2:#212a3d;
+  --border:#3d4d70; --border2:#4a5c82;
   --accent:#ff6b35; --accent2:#00d4ff; --green:#00ff88;
   --yellow:#ffd700; --red:#ff4455; --purple:#a855f7;
-  --text:#c9d6e3; --dim:#4a6080; --white:#fff;
+  --text:#eef2f8; --dim:#93a1bf; --white:#fff;
   --font-head:'Exo 2',sans-serif; --font-mono:'Share Tech Mono',monospace;
   --radius:12px;
 }
+html{font-size:18px;}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:var(--font-head);min-height:100vh;font-size:14px;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-head);min-height:100vh;font-size:16px;}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,107,53,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,53,.03) 1px,transparent 1px);background-size:50px 50px;z-index:0;pointer-events:none;}
 
 /* ── Header ── */
-.header{position:sticky;top:0;z-index:100;background:rgba(10,14,26,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;gap:1rem;}
+.header{position:sticky;top:0;z-index:100;background:rgba(28,35,51,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;gap:1rem;}
 .header-logo{font-size:1.4rem;}
 .header-title{font-size:1.05rem;font-weight:800;color:#fff;}
 .header-sub{font-family:var(--font-mono);font-size:.7rem;color:var(--accent);letter-spacing:2px;}
 .header-right{margin-left:auto;display:flex;gap:.75rem;align-items:center;}
 .btn-home{background:var(--panel);border:1px solid var(--border);color:var(--text);padding:.4rem .8rem;border-radius:8px;cursor:pointer;font-size:.8rem;text-decoration:none;display:flex;align-items:center;gap:.4rem;}
 .btn-home:hover{border-color:var(--accent);color:var(--accent);}
+
+/* ── Type selector ── */
+.type-selector-wrap{max-width:900px;margin:1rem auto 0;padding:0 1.5rem;position:relative;z-index:1;}
+.type-selector{display:flex;gap:.6rem;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:.5rem;}
+.type-btn{flex:1;padding:.75rem .6rem;border-radius:8px;border:none;cursor:pointer;font-weight:700;font-family:var(--font-head);font-size:.85rem;background:transparent;color:var(--dim);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:.2rem;}
+.type-btn .type-icon{font-size:1.2rem;}
+.type-btn .type-desc{font-size:.68rem;font-weight:500;color:var(--dim);}
+.type-btn.type-client-active{background:rgba(255,107,53,.15);color:var(--accent);border:1px solid rgba(255,107,53,.3);}
+.type-btn.type-reappro-active{background:rgba(0,212,255,.15);color:var(--accent2);border:1px solid rgba(0,212,255,.3);}
 
 /* ── Stepper ── */
 .stepper{display:flex;align-items:center;padding:.75rem 1.5rem;background:var(--panel2);border-bottom:1px solid var(--border);gap:.5rem;overflow-x:auto;scrollbar-width:none;}
@@ -177,12 +187,28 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <div class="header">
   <div class="header-logo">📋</div>
   <div>
-    <div class="header-title">Passer une commande</div>
+    <div class="header-title" id="header-title-text">Passer une commande</div>
     <div class="header-sub">ESPACE EMPLOYÉ</div>
   </div>
   <div class="header-right">
     <a href="wms.html" class="btn-home">🖥️ WMS</a>
     <a href="index.html" class="btn-home">🏠</a>
+  </div>
+</div>
+
+<!-- ── TYPE DE DEMANDE ── -->
+<div class="type-selector-wrap">
+  <div class="type-selector">
+    <button class="type-btn type-client-active" id="type-client" onclick="setOrderType('client')">
+      <span class="type-icon">📦</span>
+      <span>Commande client</span>
+      <span class="type-desc">Fait sortir du stock</span>
+    </button>
+    <button class="type-btn" id="type-reappro" onclick="setOrderType('reappro')">
+      <span class="type-icon">🔄</span>
+      <span>Réapprovisionnement</span>
+      <span class="type-desc">Fait entrer du stock</span>
+    </button>
   </div>
 </div>
 
@@ -193,7 +219,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
   <div class="step-connector" id="conn-0"></div>
   <div class="step" id="step-1" onclick="goStep(1)">
-    <div class="step-num">2</div> Informations
+    <div class="step-num">2</div> <span id="step-1-label">Informations</span>
   </div>
   <div class="step-connector" id="conn-1"></div>
   <div class="step" id="step-2" onclick="goStep(2)">
@@ -206,7 +232,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- ─ ÉTAPE 1 : Choisir articles ─ -->
   <div class="section active" id="section-0">
-    <div class="section-title">📦 Sélection des articles</div>
+    <div class="section-title" id="section-0-title">📦 Sélection des articles</div>
 
     <input class="search-box" placeholder="🔍 Rechercher un article…" oninput="filterArticles(this.value)" id="article-search"/>
 
@@ -231,9 +257,9 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- ─ ÉTAPE 2 : Informations ─ -->
   <div class="section" id="section-1">
-    <div class="section-title">📝 Informations commande</div>
+    <div class="section-title">📝 Informations</div>
 
-    <div class="form-card">
+    <div class="form-card" id="form-client-block">
       <h3>👤 Client &amp; livraison</h3>
       <div class="form-grid">
         <div class="form-group">
@@ -265,7 +291,25 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
     </div>
 
-    <div class="form-card">
+    <div class="form-card" id="form-fournisseur-block" style="display:none">
+      <h3>🚚 Fournisseur &amp; réapprovisionnement</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nom du fournisseur *</label>
+          <input type="text" id="f-fournisseur" placeholder="ex : Bureau Plus SAS"/>
+        </div>
+        <div class="form-group">
+          <label>Numéro de bon de commande fournisseur</label>
+          <input type="text" id="f-ref-fournisseur" placeholder="ex : BC-F-2025-001"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Commentaire / instructions</label>
+        <textarea id="f-comment-reappro" style="resize:vertical;min-height:60px" placeholder="Instructions particulières pour la réception…"></textarea>
+      </div>
+    </div>
+
+    <div class="form-card" id="form-mode-block">
       <h3>🚚 Mode de livraison *</h3>
       <div class="mode-options">
         <div class="mode-option selected-mode" onclick="selectMode('Standard',this)" id="mode-Standard">
@@ -289,7 +333,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
     </div>
 
-    <div class="form-card">
+    <div class="form-card" id="form-tracking-block">
       <h3>🔖 Numéro de tracking</h3>
       <p style="font-size:.8rem;color:var(--dim);margin-bottom:.75rem">Généré automatiquement. Vous pouvez aussi saisir un tracking existant.</p>
       <div class="tracking-display">
@@ -320,7 +364,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="section-title">✅ Récapitulatif &amp; confirmation</div>
 
     <div class="recap-box">
-      <h4>📦 Articles commandés</h4>
+      <h4 id="recap-articles-title">📦 Articles commandés</h4>
       <table class="recap-table">
         <thead><tr><th>Article</th><th>Réf.</th><th>Qté</th><th>P.U.</th><th>Total</th></tr></thead>
         <tbody id="recap-articles"></tbody>
@@ -332,7 +376,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     </div>
 
     <div class="recap-box">
-      <h4>📋 Informations commande</h4>
+      <h4 id="recap-infos-title">📋 Informations commande</h4>
       <div id="recap-infos"></div>
     </div>
 
@@ -343,7 +387,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
     <div style="display:flex;align-items:center;gap:.75rem;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem">
       <input type="checkbox" id="confirm-check" onchange="toggleSendBtn()"/>
-      <label for="confirm-check" style="cursor:pointer;font-size:.85rem">Je confirme que les informations ci-dessus sont correctes et que la commande peut être envoyée.</label>
+      <label for="confirm-check" style="cursor:pointer;font-size:.85rem" id="confirm-check-label">Je confirme que les informations ci-dessus sont correctes et que la commande peut être envoyée.</label>
     </div>
 
     <div class="nav-btns">
@@ -355,23 +399,23 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   <!-- ─ ENVOYÉ ─ -->
   <div class="section" id="section-3">
     <div class="success-screen">
-      <div class="success-icon">🎉</div>
-      <div class="success-title">Commande envoyée !</div>
-      <div class="success-sub">Votre commande a été transmise au WMS avec succès.</div>
+      <div class="success-icon" id="success-icon">🎉</div>
+      <div class="success-title" id="success-title-text">Commande envoyée !</div>
+      <div class="success-sub" id="success-sub-text">Votre commande a été transmise au WMS avec succès.</div>
 
       <div id="urgent-sent-indicator" style="display:none">
         <div class="urgent-sent-badge">🚨 Commande marquée URGENTE — alerte envoyée</div>
       </div>
 
       <div class="success-tracking">
-        <div class="label">Numéro de tracking</div>
+        <div class="label" id="success-tracking-label">Numéro de tracking</div>
         <div class="code" id="success-tracking">—</div>
       </div>
 
       <div id="success-recap" style="max-width:400px;margin:0 auto 2rem;text-align:left"></div>
 
       <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="newOrder()">➕ Nouvelle commande</button>
+        <button class="btn btn-primary" onclick="newOrder()">➕ Nouvelle demande</button>
         <a href="wms.html" class="btn btn-ghost">🖥️ Voir dans le WMS</a>
       </div>
     </div>
@@ -384,7 +428,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   <div class="modal">
     <button class="modal-close" onclick="closeModal('modal-confirm')">✕</button>
     <h3>🔒 Double confirmation</h3>
-    <p style="font-size:.85rem;color:var(--dim);margin-bottom:1.25rem">Veuillez confirmer une dernière fois l'envoi de cette commande. Cette action est définitive.</p>
+    <p style="font-size:.85rem;color:var(--dim);margin-bottom:1.25rem">Veuillez confirmer une dernière fois l'envoi de cette demande. Cette action est définitive.</p>
     <div id="modal-confirm-recap"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-confirm')">Annuler</button>
@@ -495,6 +539,7 @@ let currentTracking = '';
 let filteredArticles = [...ARTICLES];
 let searchText = '';
 let currentCat = '';
+let orderType = 'client'; // 'client' (sort du stock) | 'reappro' (entre en stock)
 
 // ══ Helpers ══
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6).toUpperCase(); }
@@ -520,6 +565,38 @@ function playBeep(f=440,d=.15,t='sine',v=.4){
 function playAddToCart(){ playBeep(660,.08,'sine',.3); }
 function playUrgent(){ for(let i=0;i<3;i++) setTimeout(()=>{ playBeep(1200,.1,'square',.5); setTimeout(()=>playBeep(800,.1,'square',.5),120); },i*300); }
 function playSuccess(){ playBeep(880,.1,'sine'); setTimeout(()=>playBeep(1100,.1,'sine'),120); setTimeout(()=>playBeep(1320,.15,'sine'),240); }
+
+// ══ Type de demande (commande client / réapprovisionnement) ══
+window.setOrderType = function(type){
+  orderType = type;
+  const btnClient = document.getElementById('type-client');
+  const btnReappro = document.getElementById('type-reappro');
+  btnClient.classList.toggle('type-client-active', type==='client');
+  btnReappro.classList.toggle('type-reappro-active', type==='reappro');
+
+  document.getElementById('header-title-text').textContent = type==='reappro' ? 'Réapprovisionner le stock' : 'Passer une commande';
+  document.getElementById('step-1-label').textContent = type==='reappro' ? 'Fournisseur' : 'Informations';
+  document.getElementById('section-0-title').textContent = type==='reappro' ? '📦 Sélection des articles à réapprovisionner' : '📦 Sélection des articles';
+  document.getElementById('recap-articles-title').textContent = type==='reappro' ? '📦 Articles à réceptionner' : '📦 Articles commandés';
+  document.getElementById('recap-infos-title').textContent = type==='reappro' ? '📋 Informations réapprovisionnement' : '📋 Informations commande';
+  document.getElementById('confirm-check-label').textContent = type==='reappro'
+    ? 'Je confirme que les informations ci-dessus sont correctes et que la demande de réapprovisionnement peut être envoyée.'
+    : 'Je confirme que les informations ci-dessus sont correctes et que la commande peut être envoyée.';
+
+  document.getElementById('form-client-block').style.display = type==='client' ? 'block' : 'none';
+  document.getElementById('form-fournisseur-block').style.display = type==='reappro' ? 'block' : 'none';
+  document.getElementById('form-mode-block').style.display = type==='client' ? 'block' : 'none';
+  document.getElementById('form-tracking-block').style.display = type==='client' ? 'block' : 'none';
+
+  if(type==='reappro'){
+    selectedMode='Standard';
+    document.querySelectorAll('.mode-option').forEach(m=>m.classList.remove('selected-mode'));
+    document.getElementById('mode-Standard').classList.add('selected-mode');
+    document.getElementById('urgency-warning').style.display='none';
+  }
+
+  renderArticles();
+};
 
 // ══ Categories ══
 function initCats(){
@@ -554,13 +631,14 @@ function renderArticles(){
   grid.innerHTML=filteredArticles.map(a=>{
     const qty=cart[a.id]||0;
     const sel=qty>0;
+    const stockLabel = orderType==='reappro' ? `Stock actuel : ${Number(a.stock ?? 0)} unités` : `Stock : ${Number(a.stock ?? 0)} unités`;
     return `<div class="article-card${sel?' selected':''}" id="acard-${a.id}">
       ${sel?'<div class="selected-indicator"></div>':''}
       <div class="article-cat">${a.cat ?? 'Sans catégorie'}</div>
       <div class="article-nom">${a.nom ?? 'Sans nom'}</div>
       <div class="article-ref">${a.ref ?? 'Sans réf'}</div>
       <div class="article-prix">${fmtEur(Number(a.prix ?? 0))}</div>
-      <div class="article-stock">Stock : ${Number(a.stock ?? 0)} unités</div>
+      <div class="article-stock">${stockLabel}</div>
       <div class="article-qty">
         <button class="qty-btn" onclick="changeQty('${a.id}',-1,event)">−</button>
         <span class="qty-val" id="qty-${a.id}">${qty}</span>
@@ -574,7 +652,9 @@ window.changeQty=function(id,delta,e){
   if(e){ e.stopPropagation(); }
   const art=ARTICLES.find(a=>a.id===id); if(!art)return;
   const cur=cart[id]||0;
-  const nv=Math.max(0,Math.min(art.stock,cur+delta));
+  // En réapprovisionnement, pas de plafond lié au stock actuel (on veut justement l'augmenter)
+  const maxQty = orderType==='reappro' ? 99999 : art.stock;
+  const nv=Math.max(0,Math.min(maxQty,cur+delta));
   if(nv===0) delete cart[id]; else cart[id]=nv;
   const qEl=document.getElementById('qty-'+id);
   if(qEl) qEl.textContent=nv;
@@ -622,6 +702,10 @@ window.goStep=function(n){
 
 // ══ Infos validation ══
 function validateInfosCheck(){
+  if(orderType==='reappro'){
+    if(!document.getElementById('f-fournisseur').value.trim()){ showToast('Renseignez le nom du fournisseur','warn'); return false; }
+    return true;
+  }
   if(!document.getElementById('f-client').value.trim()){ showToast('Renseignez le nom du client','warn'); return false; }
   if(!document.getElementById('f-adresse').value.trim()){ showToast('Renseignez l\'adresse de livraison','warn'); return false; }
   return true;
@@ -664,16 +748,30 @@ function buildRecap(){
     `<tr><td>${i.nom}</td><td style="font-family:var(--font-mono);font-size:.75rem">${i.ref}</td><td>${i.qty}</td><td>${fmtEur(i.prix)}</td><td style="font-weight:700;color:var(--yellow)">${fmtEur(i.prix*i.qty)}</td></tr>`
   ).join('');
   document.getElementById('recap-total').textContent=fmtEur(total);
-  const client=document.getElementById('f-client').value;
-  const adresse=document.getElementById('f-adresse').value;
-  document.getElementById('recap-infos').innerHTML=`
-    <div style="display:grid;gap:.5rem">
-      <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Client</span><span>${client}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Adresse</span><span style="text-align:right;max-width:60%">${adresse}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Mode</span><span style="color:${selectedMode==='Urgent'?'var(--red)':selectedMode==='Express'?'var(--yellow)':'var(--text)'};font-weight:700">${selectedMode==='Urgent'?'🚨':''}${selectedMode}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:.4rem 0"><span style="color:var(--dim)">Tracking</span><span style="font-family:var(--font-mono);color:var(--accent)">${currentTracking}</span></div>
-    </div>`;
-  document.getElementById('recap-urgent-warn').style.display=selectedMode==='Urgent'?'block':'none';
+
+  if(orderType==='reappro'){
+    const fournisseur=document.getElementById('f-fournisseur').value;
+    const refFournisseur=document.getElementById('f-ref-fournisseur').value;
+    document.getElementById('recap-infos').innerHTML=`
+      <div style="display:grid;gap:.5rem">
+        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Fournisseur</span><span>${fournisseur}</span></div>
+        ${refFournisseur?`<div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Réf. fournisseur</span><span>${refFournisseur}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;padding:.4rem 0"><span style="color:var(--dim)">Type</span><span style="color:var(--accent2);font-weight:700">🔄 Réapprovisionnement stock</span></div>
+      </div>`;
+    document.getElementById('recap-urgent-warn').style.display='none';
+  } else {
+    const client=document.getElementById('f-client').value;
+    const adresse=document.getElementById('f-adresse').value;
+    document.getElementById('recap-infos').innerHTML=`
+      <div style="display:grid;gap:.5rem">
+        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Client</span><span>${client}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Adresse</span><span style="text-align:right;max-width:60%">${adresse}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Mode</span><span style="color:${selectedMode==='Urgent'?'var(--red)':selectedMode==='Express'?'var(--yellow)':'var(--text)'};font-weight:700">${selectedMode==='Urgent'?'🚨':''}${selectedMode}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.4rem 0"><span style="color:var(--dim)">Tracking</span><span style="font-family:var(--font-mono);color:var(--accent)">${currentTracking}</span></div>
+      </div>`;
+    document.getElementById('recap-urgent-warn').style.display=selectedMode==='Urgent'?'block':'none';
+  }
+
   document.getElementById('confirm-check').checked=false;
   document.getElementById('btn-send').disabled=true;
 }
@@ -684,17 +782,29 @@ window.toggleSendBtn=function(){
 
 // ══ Confirm modal ══
 window.openConfirmModal=function(){
-  const client=document.getElementById('f-client').value;
   const count=Object.values(cart).reduce((s,v)=>s+v,0);
-  document.getElementById('modal-confirm-recap').innerHTML=`
-    <div class="recap-box" style="margin-bottom:0">
-      <div style="display:grid;gap:.4rem">
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Client</span><strong>${client}</strong></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Articles</span><strong>${count} article(s)</strong></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Mode</span><strong style="color:${selectedMode==='Urgent'?'var(--red)':'inherit'}">${selectedMode}</strong></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Tracking</span><strong style="font-family:var(--font-mono);color:var(--accent)">${currentTracking}</strong></div>
-      </div>
-    </div>`;
+  if(orderType==='reappro'){
+    const fournisseur=document.getElementById('f-fournisseur').value;
+    document.getElementById('modal-confirm-recap').innerHTML=`
+      <div class="recap-box" style="margin-bottom:0">
+        <div style="display:grid;gap:.4rem">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Fournisseur</span><strong>${fournisseur}</strong></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Articles</span><strong>${count} unité(s)</strong></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Type</span><strong style="color:var(--accent2)">🔄 Réapprovisionnement</strong></div>
+        </div>
+      </div>`;
+  } else {
+    const client=document.getElementById('f-client').value;
+    document.getElementById('modal-confirm-recap').innerHTML=`
+      <div class="recap-box" style="margin-bottom:0">
+        <div style="display:grid;gap:.4rem">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Client</span><strong>${client}</strong></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Articles</span><strong>${count} article(s)</strong></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Mode</span><strong style="color:${selectedMode==='Urgent'?'var(--red)':'inherit'}">${selectedMode}</strong></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Tracking</span><strong style="font-family:var(--font-mono);color:var(--accent)">${currentTracking}</strong></div>
+        </div>
+      </div>`;
+  }
   document.getElementById('modal-confirm').classList.add('open');
 };
 window.closeModal=function(id){ document.getElementById(id).classList.remove('open'); };
@@ -703,8 +813,42 @@ window.closeModal=function(id){ document.getElementById(id).classList.remove('op
 window.sendOrder=async function(){
   closeModal('modal-confirm');
   const items=Object.entries(cart).map(([id,qty])=>({...ARTICLES.find(a=>a.id===id),qty,scanned:0}));
-  const client=document.getElementById('f-client').value;
   const now=new Date();
+
+  if(orderType==='reappro'){
+    // ── Demande de réapprovisionnement : crée une réception, incrémentera le stock une fois validée dans le WMS ──
+    const rec={
+      ref:'REC-'+uid(),
+      fournisseur:document.getElementById('f-fournisseur').value,
+      refFournisseur:document.getElementById('f-ref-fournisseur').value,
+      commentaire:document.getElementById('f-comment-reappro').value,
+      articles:items.map(i=>i.nom).join(', '),
+      articlesDetail:items.map(i=>({id:i.id,nom:i.nom,ref:i.ref,qte:i.qty})),
+      qteAttendue:items.reduce((s,i)=>s+i.qty,0),
+      status:'conforme',
+      createdAt:now.getTime(),
+      dateStr:now.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),
+      isDemo:false,
+      source:'demande-reappro',
+    };
+    try{
+      if(useFirebase) await dbFirestore.collection('receptions').add(rec);
+      else {
+        rec.id=uid();
+        const existing=JSON.parse(localStorage.getItem('wms_receptions')||'[]');
+        existing.push(rec);
+        localStorage.setItem('wms_receptions',JSON.stringify(existing));
+      }
+      playSuccess();
+      showSuccessScreen(rec);
+    } catch(e){
+      showToast('Erreur lors de l\'envoi: '+e.message,'error');
+    }
+    return;
+  }
+
+  // ── Commande client classique : fait sortir du stock à l'expédition ──
+  const client=document.getElementById('f-client').value;
   const cmd={
     ref:'CMD-'+uid(),
     client,
@@ -744,20 +888,43 @@ window.sendOrder=async function(){
   }
 };
 
-function showSuccessScreen(cmd){
-  const items=cmd.articles;
-  const total=items.reduce((s,i)=>s+i.prix*i.qty,0);
+function showSuccessScreen(order){
   goStep(3);
-  document.getElementById('success-tracking').textContent=cmd.tracking;
-  document.getElementById('urgent-sent-indicator').style.display=cmd.mode==='Urgent'?'block':'none';
+
+  if(orderType==='reappro'){
+    const items=order.articlesDetail;
+    document.getElementById('success-title-text').textContent='Demande de réapprovisionnement envoyée !';
+    document.getElementById('success-sub-text').textContent='Elle a été transmise au WMS. Le superviseur devra valider la réception pour que le stock soit mis à jour.';
+    document.getElementById('urgent-sent-indicator').style.display='none';
+    document.getElementById('success-tracking-label').textContent='Référence réception';
+    document.getElementById('success-tracking').textContent=order.ref;
+    document.getElementById('success-recap').innerHTML=`
+      <div class="recap-box" style="margin-bottom:0;margin-top:1rem">
+        <h4>Récapitulatif</h4>
+        <div style="display:grid;gap:.4rem;font-size:.83rem">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Fournisseur</span><span>${order.fournisseur}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Articles</span><span>${items.length} référence(s) — ${order.qteAttendue} unité(s)</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Réf. WMS</span><span style="font-family:var(--font-mono);color:var(--accent2)">${order.ref}</span></div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const items=order.articles;
+  const total=items.reduce((s,i)=>s+i.prix*i.qty,0);
+  document.getElementById('success-title-text').textContent='Commande envoyée !';
+  document.getElementById('success-sub-text').textContent='Votre commande a été transmise au WMS avec succès.';
+  document.getElementById('success-tracking-label').textContent='Numéro de tracking';
+  document.getElementById('success-tracking').textContent=order.tracking;
+  document.getElementById('urgent-sent-indicator').style.display=order.mode==='Urgent'?'block':'none';
   document.getElementById('success-recap').innerHTML=`
     <div class="recap-box" style="margin-bottom:0;margin-top:1rem">
       <h4>Récapitulatif</h4>
       <div style="display:grid;gap:.4rem;font-size:.83rem">
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Client</span><span>${cmd.client}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Client</span><span>${order.client}</span></div>
         <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Articles</span><span>${items.length} référence(s) — ${fmtEur(total)}</span></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Mode</span><span>${cmd.mode}</span></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Réf. WMS</span><span style="font-family:var(--font-mono);color:var(--accent2)">${cmd.ref}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Mode</span><span>${order.mode}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Réf. WMS</span><span style="font-family:var(--font-mono);color:var(--accent2)">${order.ref}</span></div>
       </div>
     </div>`;
 }
@@ -770,6 +937,9 @@ window.newOrder=function(){
   document.getElementById('f-tel').value='';
   document.getElementById('f-comment').value='';
   document.getElementById('f-tracking-manual').value='';
+  document.getElementById('f-fournisseur').value='';
+  document.getElementById('f-ref-fournisseur').value='';
+  document.getElementById('f-comment-reappro').value='';
   document.querySelectorAll('.mode-option').forEach(m=>m.classList.remove('selected-mode'));
   document.getElementById('mode-Standard').classList.add('selected-mode');
   document.getElementById('urgency-warning').style.display='none';
