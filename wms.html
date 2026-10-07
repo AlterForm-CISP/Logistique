@@ -78,6 +78,7 @@ select.filter:focus{outline:none;border-color:var(--accent);}
 .stat-card.c-green::after{background:var(--green);}
 .stat-card.c-red::after{background:var(--red);}
 .stat-card.c-yellow::after{background:var(--yellow);}
+.stat-card.c-purple::after{background:var(--purple);}
 .stat-val{font-size:1.8rem;font-weight:800;color:#fff;font-family:var(--font-mono);}
 .stat-label{font-size:.72rem;color:var(--dim);margin-top:.2rem;text-transform:uppercase;letter-spacing:1px;}
 
@@ -328,6 +329,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
 
   <!-- ─ RETOURS ─ -->
   <div class="section" id="section-retours">
+    <div class="stats-row" id="stats-retours"></div>
     <div class="toolbar">
       <select class="filter" onchange="filterRetourStatus(this.value)">
         <option value="">Tous les statuts</option>
@@ -351,6 +353,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
 
   <!-- ─ RECEPTION ─ -->
   <div class="section" id="section-reception">
+    <div class="stats-row" id="stats-reception"></div>
     <div class="toolbar">
       <select class="filter" onchange="filterReceptionStatus(this.value)">
         <option value="">Tous les statuts</option>
@@ -1468,33 +1471,55 @@ function renderRetours(){
   document.getElementById('cnt-retours').textContent=allRetours.length;
   let list=allRetours;
   if(filterRetourStatusVal) list=list.filter(r=>r.status===filterRetourStatusVal);
-  if(!list.length){ tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="es-icon">↩️</div><p>Aucun retour</p></div></td></tr>`; return; }
-  list.forEach(r=>{
-    const info=retourStatusInfo(r);
-    const statusTag=`<span class="status ${info.cls}">${info.label}</span>`;
-    let actions='';
-    if(r.status==='conforme') actions=`
-      <button class="btn btn-success btn-sm" onclick="cloturerRetour('${r.id}')">✅ Clôturer</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteRetour('${r.id}')">🗑 Supprimer</button>`;
-    else if(r.status==='non-conforme'||r.status==='quarantaine'||r.status==='contact-fournisseur') actions=`
-      ${r.status!=='quarantaine'?`<button class="btn btn-warn btn-sm" onclick="actionRetour('${r.id}','quarantaine')">🔒 Quarantaine</button>`:''}
-      <button class="btn btn-ghost btn-sm" onclick="actionRetour('${r.id}','contacter')">${r.fournisseurReponse?'📞 Revoir la réponse':'📞 Contacter'}</button>
-      <button class="btn btn-ghost btn-sm" onclick="actionRetour('${r.id}','fournisseur')">📤 Fournisseur</button>
-      <button class="btn btn-ghost btn-sm" onclick="actionRetour('${r.id}','stock')">📦 Stock</button>
-      ${r.status==='quarantaine'?`<button class="btn btn-ghost btn-sm" onclick="actionRetour('${r.id}','detruit')">🗑️ Détruire</button>`:''}
-      <button class="btn btn-danger btn-sm" onclick="openLitige('${r.id}')">⚠️ Litige</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteRetour('${r.id}')">🗑 Supprimer</button>`;
-    else actions=`
-      <span style="color:var(--green);font-size:.8rem">✅ Traité</span>
-      <button class="btn btn-danger btn-sm" onclick="deleteRetour('${r.id}')">🗑 Supprimer</button>`;
-    tbody.innerHTML+=`<tr>
-      <td><span class="cmd-ref">${r.ref}</span></td>
-      <td>${r.article}</td><td>${r.qte}</td>
-      <td style="font-size:.78rem;color:var(--dim)">${r.motif}</td>
-      <td>${statusTag}</td>
-      <td><div class="actions-cell">${actions}</div></td>
-    </tr>`;
-  });
+  if(!list.length){
+    tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="es-icon">↩️</div><p>Aucun retour</p></div></td></tr>`;
+  } else {
+    list.forEach(r=>{
+      const info=retourStatusInfo(r);
+      const statusTag=`<span class="status ${info.cls}">${info.label}</span>`;
+      let actions='';
+      if(r.status==='conforme') actions=`
+        <button class="btn btn-success btn-sm" onclick="cloturerRetour('${r.id}')">✅ Clôturer</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRetour('${r.id}')">🗑 Supprimer</button>`;
+      else if(r.status==='non-conforme'||r.status==='quarantaine'||r.status==='contact-fournisseur') actions=`
+        ${r.status!=='quarantaine'?`<button class="btn btn-warn btn-sm" onclick="actionRetour('${r.id}','quarantaine')">🔒 Quarantaine</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="actionRetour('${r.id}','contacter')">${r.fournisseurReponse?'📞 Revoir la réponse':'📞 Contacter'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="actionRetour('${r.id}','fournisseur')">📤 Fournisseur</button>
+        <button class="btn btn-ghost btn-sm" onclick="actionRetour('${r.id}','stock')">📦 Stock</button>
+        ${r.status==='quarantaine'?`<button class="btn btn-ghost btn-sm" onclick="actionRetour('${r.id}','detruit')">🗑️ Détruire</button>`:''}
+        <button class="btn btn-danger btn-sm" onclick="openLitige('${r.id}')">⚠️ Litige</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRetour('${r.id}')">🗑 Supprimer</button>`;
+      else actions=`
+        <span style="color:var(--green);font-size:.8rem">✅ Traité</span>
+        <button class="btn btn-danger btn-sm" onclick="deleteRetour('${r.id}')">🗑 Supprimer</button>`;
+      tbody.innerHTML+=`<tr>
+        <td><span class="cmd-ref">${r.ref}</span></td>
+        <td>${r.article}</td><td>${r.qte}</td>
+        <td style="font-size:.78rem;color:var(--dim)">${r.motif}</td>
+        <td>${statusTag}</td>
+        <td><div class="actions-cell">${actions}</div></td>
+      </tr>`;
+    });
+  }
+  updateStatsRetours();
+}
+
+function updateStatsRetours(){
+  const total=allRetours.length;
+  const nonConforme=allRetours.filter(r=>r.status==='non-conforme').length;
+  const quarantaine=allRetours.filter(r=>r.status==='quarantaine').length;
+  const contact=allRetours.filter(r=>r.status==='contact-fournisseur').length;
+  const resolus=allRetours.filter(r=>r.status==='resolue').length;
+  const litiges=allRetours.filter(r=>r.action==='litige').length;
+  const el=document.getElementById('stats-retours');
+  if(!el) return;
+  el.innerHTML=`
+    <div class="stat-card c-blue"><div class="stat-val">${total}</div><div class="stat-label">Total retours</div></div>
+    <div class="stat-card c-red"><div class="stat-val">${nonConforme}</div><div class="stat-label">Non conformes</div></div>
+    <div class="stat-card c-purple"><div class="stat-val">${quarantaine}</div><div class="stat-label">Quarantaine</div></div>
+    <div class="stat-card c-orange"><div class="stat-val">${contact}</div><div class="stat-label">Contact fournisseur</div></div>
+    <div class="stat-card c-green"><div class="stat-val">${resolus}</div><div class="stat-label">Résolus</div></div>
+    <div class="stat-card c-yellow"><div class="stat-val">${litiges}</div><div class="stat-label">⚠️ Litiges</div></div>`;
 }
 
 window.cloturerRetour=async function(id){
@@ -1762,7 +1787,9 @@ function renderReceptions(){
   tbody.innerHTML=''; document.getElementById('cnt-reception').textContent=allReceptions.length;
   let list=allReceptions;
   if(filterReceptionStatusVal) list=list.filter(r=>r.status===filterReceptionStatusVal);
-  if(!list.length){ tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="es-icon">🚚</div><p>Aucune réception</p></div></td></tr>`; return; }
+  if(!list.length){
+    tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="es-icon">🚚</div><p>Aucune réception</p></div></td></tr>`;
+  } else {
   list.forEach(r=>{
     const info=receptionStatusInfo(r);
     const statusTag=`<span class="status ${info.cls}">${info.label}</span>`;
@@ -1787,6 +1814,24 @@ function renderReceptions(){
       <td><div class="actions-cell">${actions}</div></td>
     </tr>`;
   });
+  }
+  updateStatsReceptions();
+}
+
+function updateStatsReceptions(){
+  const total=allReceptions.length;
+  const nonConforme=allReceptions.filter(r=>r.status==='non-conforme').length;
+  const attente=allReceptions.filter(r=>r.status==='attente').length;
+  const contact=allReceptions.filter(r=>r.status==='contact-fournisseur').length;
+  const resolues=allReceptions.filter(r=>r.status==='resolue').length;
+  const el=document.getElementById('stats-reception');
+  if(!el) return;
+  el.innerHTML=`
+    <div class="stat-card c-blue"><div class="stat-val">${total}</div><div class="stat-label">Total réceptions</div></div>
+    <div class="stat-card c-red"><div class="stat-val">${nonConforme}</div><div class="stat-label">Non conformes</div></div>
+    <div class="stat-card c-yellow"><div class="stat-val">${attente}</div><div class="stat-label">En attente</div></div>
+    <div class="stat-card c-purple"><div class="stat-val">${contact}</div><div class="stat-label">Contact fournisseur</div></div>
+    <div class="stat-card c-green"><div class="stat-val">${resolues}</div><div class="stat-label">Résolues</div></div>`;
 }
 
 window.editReceptionAdresse=async function(id){
