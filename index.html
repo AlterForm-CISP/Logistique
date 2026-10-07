@@ -296,11 +296,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <div class="form-grid">
         <div class="form-group">
           <label>Nom du fournisseur *</label>
-          <input type="text" id="f-fournisseur" placeholder="ex : Bureau Plus SAS"/>
+          <select id="f-fournisseur">
+            <option value="">— Choisir un fournisseur —</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Numéro de bon de commande fournisseur</label>
-          <input type="text" id="f-ref-fournisseur" placeholder="ex : BC-F-2025-001"/>
+          <div style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:.55rem .85rem;color:var(--dim);font-size:.85rem">
+            Généré automatiquement à l'envoi
+          </div>
         </div>
       </div>
       <div class="form-group">
@@ -531,6 +535,30 @@ if (useFirebase) {
   });
 }
 
+// 3. Récupération de la liste des fournisseurs (même source de référence que le WMS superviseur)
+let FOURNISSEURS = [];
+
+function populateFournisseurSelect(){
+  const sel = document.getElementById('f-fournisseur');
+  if(!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Choisir un fournisseur —</option>'
+    + FOURNISSEURS.map(f => `<option value="${f.nom}">${f.nom}</option>`).join('');
+  if(FOURNISSEURS.some(f => f.nom === current)) sel.value = current;
+}
+
+if (useFirebase) {
+  dbFirestore.collection('refdata').doc('listes').get().then(function(snap){
+    if(snap.exists){
+      const data = snap.data();
+      FOURNISSEURS = Array.isArray(data.fournisseurs) ? data.fournisseurs : [];
+      populateFournisseurSelect();
+    }
+  }).catch(function(error){
+    console.error("Erreur de lecture des fournisseurs :", error);
+  });
+}
+
 // ══ State ══
 let cart = {}; // {id: qty}
 let currentStep = 0;
@@ -544,6 +572,31 @@ let orderType = 'client'; // 'client' (sort du stock) | 'reappro' (entre en stoc
 // ══ Helpers ══
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6).toUpperCase(); }
 function fmtEur(v){ const n=parseFloat(v); return isNaN(n)?'—':n.toFixed(2).replace('.',',')+' €'; }
+
+// Génère un numéro de bon de commande fournisseur séquentiel (BC-F-00001, BC-F-00002, …)
+// Partagé avec le WMS superviseur via un compteur Firestore (transaction atomique).
+async function genBonCommandeFournisseur(){
+  if(useFirebase){
+    try{
+      const compteurRef = dbFirestore.collection('compteurs').doc('bonCommandeFournisseur');
+      const next = await dbFirestore.runTransaction(async (tx) => {
+        const snap = await tx.get(compteurRef);
+        const current = snap.exists ? Number(snap.data().valeur || 0) : 0;
+        const nv = current + 1;
+        tx.set(compteurRef, { valeur: nv });
+        return nv;
+      });
+      return 'BC-F-' + String(next).padStart(5, '0');
+    } catch(e) {
+      console.error('Erreur génération du numéro de bon de commande :', e);
+    }
+  }
+  // Fallback local (hors Firebase ou en cas d'erreur réseau)
+  const current = Number(localStorage.getItem('wms_bon_commande_fournisseur_compteur') || '0');
+  const next = current + 1;
+  localStorage.setItem('wms_bon_commande_fournisseur_compteur', String(next));
+  return 'BC-F-' + String(next).padStart(5, '0');
+}
 
 function showToast(msg, type='info', dur=3500){
   const c=document.getElementById('toast-container');
@@ -751,11 +804,10 @@ function buildRecap(){
 
   if(orderType==='reappro'){
     const fournisseur=document.getElementById('f-fournisseur').value;
-    const refFournisseur=document.getElementById('f-ref-fournisseur').value;
     document.getElementById('recap-infos').innerHTML=`
       <div style="display:grid;gap:.5rem">
         <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Fournisseur</span><span>${fournisseur}</span></div>
-        ${refFournisseur?`<div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Réf. fournisseur</span><span>${refFournisseur}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">N° bon de commande</span><span style="color:var(--dim);font-style:italic">Généré à l'envoi</span></div>
         <div style="display:flex;justify-content:space-between;padding:.4rem 0"><span style="color:var(--dim)">Type</span><span style="color:var(--accent2);font-weight:700">🔄 Réapprovisionnement stock</span></div>
       </div>`;
     document.getElementById('recap-urgent-warn').style.display='none';
@@ -817,10 +869,11 @@ window.sendOrder=async function(){
 
   if(orderType==='reappro'){
     // ── Demande de réapprovisionnement : crée une réception, incrémentera le stock une fois validée dans le WMS ──
+    const refFournisseur = await genBonCommandeFournisseur();
     const rec={
       ref:'REC-'+uid(),
       fournisseur:document.getElementById('f-fournisseur').value,
-      refFournisseur:document.getElementById('f-ref-fournisseur').value,
+      refFournisseur,
       commentaire:document.getElementById('f-comment-reappro').value,
       articles:items.map(i=>i.nom).join(', '),
       articlesDetail:items.map(i=>({id:i.id,nom:i.nom,ref:i.ref,qte:i.qty})),
@@ -903,6 +956,7 @@ function showSuccessScreen(order){
         <h4>Récapitulatif</h4>
         <div style="display:grid;gap:.4rem;font-size:.83rem">
           <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Fournisseur</span><span>${order.fournisseur}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">N° bon de commande</span><span style="font-family:var(--font-mono);color:var(--accent2)">${order.refFournisseur||'—'}</span></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Articles</span><span>${items.length} référence(s) — ${order.qteAttendue} unité(s)</span></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Réf. WMS</span><span style="font-family:var(--font-mono);color:var(--accent2)">${order.ref}</span></div>
         </div>
@@ -938,7 +992,6 @@ window.newOrder=function(){
   document.getElementById('f-comment').value='';
   document.getElementById('f-tracking-manual').value='';
   document.getElementById('f-fournisseur').value='';
-  document.getElementById('f-ref-fournisseur').value='';
   document.getElementById('f-comment-reappro').value='';
   document.querySelectorAll('.mode-option').forEach(m=>m.classList.remove('selected-mode'));
   document.getElementById('mode-Standard').classList.add('selected-mode');
