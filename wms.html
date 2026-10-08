@@ -781,8 +781,13 @@ let CLIENTS = [];
 let RESPONSABLES = [];
 let FOURNISSEURS = [];
 
+// Tailles cibles des listes (réduction de 60 % : 100 -> 40)
+const NB_CLIENTS = 40;
+const NB_FOURNISSEURS = 40;
+const NB_RESPONSABLES = 40;
+
 function genClientsBE(){
-  return genUniqueListBE(100, ()=>{
+  return genUniqueListBE(NB_CLIENTS, ()=>{
     const loc=randomEl(VILLES_BE);
     const suffix=randomEl(CLIENT_SUFFIXES_BE);
     const nom = `${randomEl(CLIENT_TYPES_BE)} ${loc.ville}${suffix?' '+suffix:''}`;
@@ -790,10 +795,10 @@ function genClientsBE(){
   });
 }
 function genResponsablesBE(){
-  return genUniqueListBE(100, ()=>`${randomEl(PRENOMS_BE)} ${randomEl(NOMS_BE)}`);
+  return genUniqueListBE(NB_RESPONSABLES, ()=>`${randomEl(PRENOMS_BE)} ${randomEl(NOMS_BE)}`);
 }
 function genFournisseursBE(){
-  return genUniqueListBE(100, ()=>{
+  return genUniqueListBE(NB_FOURNISSEURS, ()=>{
     const nom = `${randomEl(FOURNISSEUR_SECTEURS_BE)} ${randomEl(FOURNISSEUR_RACINES_BE)} ${randomEl(FOURNISSEUR_FORMES_BE)}`;
     return {
       nom,
@@ -802,6 +807,23 @@ function genFournisseursBE(){
       email: `contact@${slugifyBE(nom)}.be`,
     };
   });
+}
+
+// Réduit les listes déjà persistées si elles dépassent la taille cible. Retourne true si modifiées.
+function trimRefData(){
+  let changed = false;
+  if(CLIENTS.length > NB_CLIENTS){ CLIENTS = CLIENTS.slice(0, NB_CLIENTS); changed = true; }
+  if(FOURNISSEURS.length > NB_FOURNISSEURS){ FOURNISSEURS = FOURNISSEURS.slice(0, NB_FOURNISSEURS); changed = true; }
+  if(RESPONSABLES.length > NB_RESPONSABLES){ RESPONSABLES = RESPONSABLES.slice(0, NB_RESPONSABLES); changed = true; }
+  return changed;
+}
+
+async function persistRefData(){
+  localStorage.setItem('wms_refdata', JSON.stringify({CLIENTS,RESPONSABLES,FOURNISSEURS}));
+  if(useFirebase){
+    try{ await setDoc(doc(db,'refdata','listes'),{clients:CLIENTS,responsables:RESPONSABLES,fournisseurs:FOURNISSEURS}); }
+    catch(e){ console.warn('Écriture refdata Firestore impossible', e); }
+  }
 }
 
 async function ensureRefData(){
@@ -813,7 +835,8 @@ async function ensureRefData(){
         const d = snap.data();
         if(Array.isArray(d.clients) && d.clients.length){
           CLIENTS = d.clients; RESPONSABLES = d.responsables || []; FOURNISSEURS = d.fournisseurs || [];
-          localStorage.setItem('wms_refdata', JSON.stringify({CLIENTS,RESPONSABLES,FOURNISSEURS}));
+          if(trimRefData()) await persistRefData();
+          else localStorage.setItem('wms_refdata', JSON.stringify({CLIENTS,RESPONSABLES,FOURNISSEURS}));
           return;
         }
       }
@@ -827,9 +850,8 @@ async function ensureRefData(){
       const d = JSON.parse(cached);
       if(Array.isArray(d.CLIENTS) && d.CLIENTS.length){
         CLIENTS = d.CLIENTS; RESPONSABLES = d.RESPONSABLES || []; FOURNISSEURS = d.FOURNISSEURS || [];
-        if(useFirebase){
-          try{ await setDoc(doc(db,'refdata','listes'),{clients:CLIENTS,responsables:RESPONSABLES,fournisseurs:FOURNISSEURS}); }catch(e){}
-        }
+        trimRefData();
+        await persistRefData();
         return;
       }
     }
@@ -839,11 +861,7 @@ async function ensureRefData(){
   CLIENTS = genClientsBE();
   RESPONSABLES = genResponsablesBE();
   FOURNISSEURS = genFournisseursBE();
-  localStorage.setItem('wms_refdata', JSON.stringify({CLIENTS,RESPONSABLES,FOURNISSEURS}));
-  if(useFirebase){
-    try{ await setDoc(doc(db,'refdata','listes'),{clients:CLIENTS,responsables:RESPONSABLES,fournisseurs:FOURNISSEURS}); }
-    catch(e){ console.warn('Écriture refdata Firestore impossible', e); }
-  }
+  await persistRefData();
 }
 
 // Régénère complètement les listes de référence (action manuelle)
