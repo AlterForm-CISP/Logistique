@@ -633,21 +633,72 @@ tr:hover td{background:rgba(255,255,255,.02);}
     <h2 style="margin:0;">👥 Clients</h2>
     <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
       <input class="search-box" style="max-width:280px;margin:0" placeholder="🔍 Rechercher un client…" oninput="filterClientsWMS(this.value)"/>
+      <button class="btn btn-success btn-sm" onclick="openModal('modal-add-client')">➕ Ajouter un client</button>
       <button class="btn btn-ghost btn-sm" onclick="regenerateRefData()" title="Génère de nouvelles listes de clients, fournisseurs et responsables">🔁 Régénérer les listes</button>
     </div>
   </div>
-  <p style="font-size:.8rem;color:var(--dim);margin-bottom:1rem">Liste de référence en lecture seule — sert à vérifier que l'adresse de livraison indiquée sur une commande correspond bien au client. Certaines commandes des scénarios avancés/experts contiennent volontairement une adresse erronée à corriger.</p>
+  <p style="font-size:.8rem;color:var(--dim);margin-bottom:1rem">Liste de référence — sert à vérifier que l'adresse de livraison indiquée sur une commande correspond bien au client, et alimente la liste déroulante de la page de commande. Vous pouvez ajouter ou supprimer des clients.</p>
   <div id="clientsWMSContainer"></div>
 
   <div style="display:flex;justify-content:space-between;align-items:center;margin:2rem 0 1rem;flex-wrap:wrap;gap:.5rem;">
     <h2 style="margin:0;">🏭 Fournisseurs</h2>
-    <input class="search-box" style="max-width:280px;margin:0" placeholder="🔍 Rechercher un fournisseur…" oninput="filterFournisseursWMS(this.value)"/>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+      <input class="search-box" style="max-width:280px;margin:0" placeholder="🔍 Rechercher un fournisseur…" oninput="filterFournisseursWMS(this.value)"/>
+      <button class="btn btn-success btn-sm" onclick="openModal('modal-add-fournisseur')">➕ Ajouter un fournisseur</button>
+    </div>
   </div>
-  <p style="font-size:.8rem;color:var(--dim);margin-bottom:1rem">Liste de référence en lecture seule — sert à vérifier que l'adresse indiquée sur une réception correspond bien au fournisseur.</p>
+  <p style="font-size:.8rem;color:var(--dim);margin-bottom:1rem">Liste de référence — sert à vérifier que l'adresse indiquée sur une réception correspond bien au fournisseur, et alimente la liste déroulante de réapprovisionnement. Vous pouvez ajouter ou supprimer des fournisseurs.</p>
   <div id="fournisseursWMSContainer"></div>
 </div>
 
-<!-- Ajout article -->
+<!-- Ajout client -->
+<div class="modal-overlay" id="modal-add-client">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-add-client')">✕</button>
+    <h3>➕ Nouveau client</h3>
+    <div class="form-group">
+      <label>Nom du client *</label>
+      <input id="add-client-nom" type="text" placeholder="Nom ou société">
+    </div>
+    <div class="form-group">
+      <label>Adresse de livraison *</label>
+      <input id="add-client-adresse" type="text" placeholder="Rue, n°, code postal, ville">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-client')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveNewClient()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ajout fournisseur -->
+<div class="modal-overlay" id="modal-add-fournisseur">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-add-fournisseur')">✕</button>
+    <h3>➕ Nouveau fournisseur</h3>
+    <div class="form-group">
+      <label>Nom du fournisseur *</label>
+      <input id="add-four-nom" type="text" placeholder="Nom ou société">
+    </div>
+    <div class="form-group">
+      <label>Adresse *</label>
+      <input id="add-four-adresse" type="text" placeholder="Rue, n°, code postal, ville">
+    </div>
+    <div class="form-group">
+      <label>Téléphone</label>
+      <input id="add-four-tel" type="text" placeholder="+32 …">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input id="add-four-email" type="email" placeholder="contact@exemple.be">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-fournisseur')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveNewFournisseur()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast container -->
 <div class="toast-container" id="toast-container"></div>
 
@@ -809,7 +860,11 @@ function genFournisseursBE(){
   });
 }
 
-// Réduit les listes déjà persistées si elles dépassent la taille cible. Retourne true si modifiées.
+// Version du format des listes de référence.
+// v2 : listes réduites à 40 (une seule fois), puis modifiables manuellement (ajout/suppression).
+const REF_VERSION = 2;
+
+// Réduit les listes à la taille cible (migration unique). Retourne true si modifiées.
 function trimRefData(){
   let changed = false;
   if(CLIENTS.length > NB_CLIENTS){ CLIENTS = CLIENTS.slice(0, NB_CLIENTS); changed = true; }
@@ -818,12 +873,16 @@ function trimRefData(){
   return changed;
 }
 
+// Sauvegarde les listes (cache local + Firestore). Retourne false si l'écriture Firestore échoue.
 async function persistRefData(){
-  localStorage.setItem('wms_refdata', JSON.stringify({CLIENTS,RESPONSABLES,FOURNISSEURS}));
+  localStorage.setItem('wms_refdata', JSON.stringify({CLIENTS,RESPONSABLES,FOURNISSEURS,refVersion:REF_VERSION}));
   if(useFirebase){
-    try{ await setDoc(doc(db,'refdata','listes'),{clients:CLIENTS,responsables:RESPONSABLES,fournisseurs:FOURNISSEURS}); }
-    catch(e){ console.warn('Écriture refdata Firestore impossible', e); }
+    try{
+      await setDoc(doc(db,'refdata','listes'),{clients:CLIENTS,responsables:RESPONSABLES,fournisseurs:FOURNISSEURS,refVersion:REF_VERSION});
+      return true;
+    }catch(e){ console.warn('Écriture refdata Firestore impossible', e); return false; }
   }
+  return true;
 }
 
 async function ensureRefData(){
@@ -835,8 +894,8 @@ async function ensureRefData(){
         const d = snap.data();
         if(Array.isArray(d.clients) && d.clients.length){
           CLIENTS = d.clients; RESPONSABLES = d.responsables || []; FOURNISSEURS = d.fournisseurs || [];
-          if(trimRefData()) await persistRefData();
-          else localStorage.setItem('wms_refdata', JSON.stringify({CLIENTS,RESPONSABLES,FOURNISSEURS}));
+          if(d.refVersion !== REF_VERSION){ trimRefData(); await persistRefData(); }
+          else localStorage.setItem('wms_refdata', JSON.stringify({CLIENTS,RESPONSABLES,FOURNISSEURS,refVersion:REF_VERSION}));
           return;
         }
       }
@@ -850,7 +909,7 @@ async function ensureRefData(){
       const d = JSON.parse(cached);
       if(Array.isArray(d.CLIENTS) && d.CLIENTS.length){
         CLIENTS = d.CLIENTS; RESPONSABLES = d.RESPONSABLES || []; FOURNISSEURS = d.FOURNISSEURS || [];
-        trimRefData();
+        if(d.refVersion !== REF_VERSION) trimRefData();
         await persistRefData();
         return;
       }
@@ -866,15 +925,12 @@ async function ensureRefData(){
 
 // Régénère complètement les listes de référence (action manuelle)
 window.regenerateRefData = async function(){
-  if(!confirm('Régénérer toutes les listes de clients, fournisseurs et responsables ?\n\nLes commandes et réceptions existantes référenceront des noms qui n\'existeront plus.')) return;
+  if(!confirm('Régénérer toutes les listes de clients, fournisseurs et responsables ?\n\nLes clients et fournisseurs ajoutés manuellement seront perdus, et les commandes et réceptions existantes référenceront des noms qui n\'existeront plus.')) return;
   CLIENTS = genClientsBE();
   RESPONSABLES = genResponsablesBE();
   FOURNISSEURS = genFournisseursBE();
-  localStorage.setItem('wms_refdata', JSON.stringify({CLIENTS,RESPONSABLES,FOURNISSEURS}));
-  if(useFirebase){
-    try{ await setDoc(doc(db,'refdata','listes'),{clients:CLIENTS,responsables:RESPONSABLES,fournisseurs:FOURNISSEURS}); }
-    catch(e){ showToast('Erreur lors de l\'enregistrement des listes','error'); return; }
-  }
+  const ok = await persistRefData();
+  if(!ok){ showToast('Erreur lors de l\'enregistrement des listes','error'); return; }
   await addHistorique({type:'refdata',icon:'🔁',color:'var(--purple)',msg:'Listes de référence (clients, fournisseurs, responsables) régénérées'});
   showToast('Listes de référence régénérées','success');
   if(document.getElementById('section-fournisseurs')?.classList.contains('active')){ loadFournisseursWMS(); loadClientsWMS(); }
@@ -1366,7 +1422,8 @@ window.viewCommande=function(id){
   document.getElementById('modal-cmd-body').innerHTML=`
     ${cmd.adresseAVerifier?`<div style="background:rgba(255,68,85,.12);border:1px solid rgba(255,68,85,.35);border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;color:var(--red);font-weight:700;display:flex;align-items:center;gap:.5rem">⚠️ Attention, vérifier l'adresse.</div>`:''}
     <div class="feedback-box" style="margin-bottom:1rem">
-      <div class="feedback-stat"><span>Client</span><span>${cmd.client}</span></div>
+      <div class="feedback-stat"><span>Client</span><span>${escapeHTML(cmd.client)}</span></div>
+      ${cmd.refClient?`<div class="feedback-stat"><span>N° bon de commande</span><span class="feedback-val">${escapeHTML(cmd.refClient)}</span></div>`:''}
       <div class="feedback-stat"><span>Mode</span><span>${cmd.mode}</span></div>
       <div class="feedback-stat"><span>Statut</span><span>${statusLabel(cmd.status)}</span></div>
       <div class="feedback-stat"><span>Tracking</span><span class="feedback-val">${cmd.tracking}</span></div>
@@ -1726,7 +1783,7 @@ window.loadArticlesWMS = function(){
   }).join('');
 }
 
-// ══ Fournisseurs (lecture seule) ══
+// ══ Fournisseurs (liste de référence, ajout/suppression manuels) ══
 let fournisseursSearchVal='';
 window.filterFournisseursWMS=function(v){ fournisseursSearchVal=v; loadFournisseursWMS(); };
 
@@ -1737,7 +1794,7 @@ window.loadFournisseursWMS = function(){
   let list = [...FOURNISSEURS].sort((a,b)=>a.nom.localeCompare(b.nom));
   if(fournisseursSearchVal){
     const q=fournisseursSearchVal.toLowerCase();
-    list = list.filter(f => (f.nom+f.adresse+f.telephone+f.email).toLowerCase().includes(q));
+    list = list.filter(f => ((f.nom||'')+(f.adresse||'')+(f.telephone||'')+(f.email||'')).toLowerCase().includes(q));
   }
 
   if(!list.length){ c.innerHTML='<div class="empty-state"><div class="es-icon">🏭</div><p>Aucun fournisseur trouvé</p></div>'; return; }
@@ -1745,16 +1802,51 @@ window.loadFournisseursWMS = function(){
   c.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;">
     ${list.map(f => `
       <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:1rem;">
-        <div style="font-weight:700;color:#fff;">${f.nom}</div>
-        <div style="margin-top:.35rem;color:var(--dim);font-size:.8rem;">📍 ${f.adresse}</div>
-        <div style="margin-top:.25rem;color:var(--dim);font-size:.8rem;">📞 ${f.telephone}</div>
-        <div style="margin-top:.25rem;color:var(--accent2);font-size:.8rem;">✉️ ${f.email}</div>
+        <div style="font-weight:700;color:#fff;">${escapeHTML(f.nom)}</div>
+        <div style="margin-top:.35rem;color:var(--dim);font-size:.8rem;">📍 ${escapeHTML(f.adresse)}</div>
+        ${f.telephone?`<div style="margin-top:.25rem;color:var(--dim);font-size:.8rem;">📞 ${escapeHTML(f.telephone)}</div>`:''}
+        ${f.email?`<div style="margin-top:.25rem;color:var(--accent2);font-size:.8rem;">✉️ ${escapeHTML(f.email)}</div>`:''}
+        <div style="margin-top:.75rem;"><button class="btn btn-danger btn-sm" data-del-four="${escapeHTML(f.nom)}">🗑 Supprimer</button></div>
       </div>
     `).join('')}
   </div>`;
+  c.querySelectorAll('[data-del-four]').forEach(btn=>{
+    btn.addEventListener('click', ()=> deleteFournisseur(btn.dataset.delFour));
+  });
 }
 
-// ══ Clients (lecture seule) ══
+window.saveNewFournisseur = async function(){
+  const nom = document.getElementById('add-four-nom').value.trim();
+  const adresse = document.getElementById('add-four-adresse').value.trim();
+  const telephone = document.getElementById('add-four-tel').value.trim();
+  const email = document.getElementById('add-four-email').value.trim();
+  if(!nom || !adresse){ showToast('Renseignez au minimum le nom et l\'adresse','error'); return; }
+  if(email && !email.includes('@')){ showToast('Adresse email invalide','error'); return; }
+  if(FOURNISSEURS.some(f=>f.nom.toLowerCase()===nom.toLowerCase())){ showToast('Un fournisseur portant ce nom existe déjà','error'); return; }
+
+  FOURNISSEURS.push({ nom, adresse, telephone, email });
+  const ok = await persistRefData();
+  if(!ok){ FOURNISSEURS.pop(); showToast('Erreur lors de l\'enregistrement','error'); return; }
+  await addHistorique({type:'refdata',icon:'🏭',color:'var(--accent2)',msg:`Fournisseur ajouté : ${nom}`});
+  ['add-four-nom','add-four-adresse','add-four-tel','add-four-email'].forEach(id=>document.getElementById(id).value='');
+  closeModal('modal-add-fournisseur');
+  showToast(`Fournisseur "${nom}" ajouté`,'success');
+  loadFournisseursWMS();
+};
+
+window.deleteFournisseur = async function(nom){
+  if(FOURNISSEURS.length<=1){ showToast('Impossible de supprimer le dernier fournisseur','error'); return; }
+  if(!confirm(`Supprimer le fournisseur "${nom}" ?\n\nLes réceptions déjà créées à son nom ne pourront plus être vérifiées par rapport à cette liste.`)) return;
+  const backup = FOURNISSEURS;
+  FOURNISSEURS = FOURNISSEURS.filter(f=>f.nom!==nom);
+  const ok = await persistRefData();
+  if(!ok){ FOURNISSEURS = backup; showToast('Erreur lors de la suppression','error'); return; }
+  await addHistorique({type:'refdata',icon:'🗑',color:'var(--red)',msg:`Fournisseur supprimé : ${nom}`});
+  showToast('Fournisseur supprimé','success');
+  loadFournisseursWMS();
+};
+
+// ══ Clients (liste de référence, ajout/suppression manuels) ══
 let clientsSearchVal='';
 window.filterClientsWMS=function(v){ clientsSearchVal=v; loadClientsWMS(); };
 
@@ -1765,7 +1857,7 @@ window.loadClientsWMS = function(){
   let list = [...CLIENTS].sort((a,b)=>a.nom.localeCompare(b.nom));
   if(clientsSearchVal){
     const q=clientsSearchVal.toLowerCase();
-    list = list.filter(cl => (cl.nom+cl.adresse).toLowerCase().includes(q));
+    list = list.filter(cl => ((cl.nom||'')+(cl.adresse||'')).toLowerCase().includes(q));
   }
 
   if(!list.length){ c.innerHTML='<div class="empty-state"><div class="es-icon">👥</div><p>Aucun client trouvé</p></div>'; return; }
@@ -1773,12 +1865,44 @@ window.loadClientsWMS = function(){
   c.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;">
     ${list.map(cl => `
       <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:1rem;">
-        <div style="font-weight:700;color:#fff;">${cl.nom}</div>
-        <div style="margin-top:.35rem;color:var(--dim);font-size:.8rem;">📍 ${cl.adresse}</div>
+        <div style="font-weight:700;color:#fff;">${escapeHTML(cl.nom)}</div>
+        <div style="margin-top:.35rem;color:var(--dim);font-size:.8rem;">📍 ${escapeHTML(cl.adresse)}</div>
+        <div style="margin-top:.75rem;"><button class="btn btn-danger btn-sm" data-del-client="${escapeHTML(cl.nom)}">🗑 Supprimer</button></div>
       </div>
     `).join('')}
   </div>`;
+  c.querySelectorAll('[data-del-client]').forEach(btn=>{
+    btn.addEventListener('click', ()=> deleteClient(btn.dataset.delClient));
+  });
 }
+
+window.saveNewClient = async function(){
+  const nom = document.getElementById('add-client-nom').value.trim();
+  const adresse = document.getElementById('add-client-adresse').value.trim();
+  if(!nom || !adresse){ showToast('Renseignez le nom et l\'adresse','error'); return; }
+  if(CLIENTS.some(c=>c.nom.toLowerCase()===nom.toLowerCase())){ showToast('Un client portant ce nom existe déjà','error'); return; }
+
+  CLIENTS.push({ nom, adresse });
+  const ok = await persistRefData();
+  if(!ok){ CLIENTS.pop(); showToast('Erreur lors de l\'enregistrement','error'); return; }
+  await addHistorique({type:'refdata',icon:'👥',color:'var(--accent2)',msg:`Client ajouté : ${nom}`});
+  ['add-client-nom','add-client-adresse'].forEach(id=>document.getElementById(id).value='');
+  closeModal('modal-add-client');
+  showToast(`Client "${nom}" ajouté`,'success');
+  loadClientsWMS();
+};
+
+window.deleteClient = async function(nom){
+  if(CLIENTS.length<=1){ showToast('Impossible de supprimer le dernier client','error'); return; }
+  if(!confirm(`Supprimer le client "${nom}" ?\n\nLes commandes déjà créées à son nom ne pourront plus être vérifiées par rapport à cette liste.`)) return;
+  const backup = CLIENTS;
+  CLIENTS = CLIENTS.filter(c=>c.nom!==nom);
+  const ok = await persistRefData();
+  if(!ok){ CLIENTS = backup; showToast('Erreur lors de la suppression','error'); return; }
+  await addHistorique({type:'refdata',icon:'🗑',color:'var(--red)',msg:`Client supprimé : ${nom}`});
+  showToast('Client supprimé','success');
+  loadClientsWMS();
+};
 
 function receptionStatusInfo(r){
   const motifLabel = r.motifNC ? r.motifNC.label : null;
@@ -1876,7 +2000,8 @@ window.viewReception=function(id){
   document.getElementById('modal-reception-body').innerHTML=`
     ${r.adresseAVerifier?`<div style="background:rgba(255,68,85,.12);border:1px solid rgba(255,68,85,.35);border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;color:var(--red);font-weight:700;display:flex;align-items:center;gap:.5rem">⚠️ Attention, vérifier l'adresse.</div>`:''}
     <div class="feedback-box" style="margin-bottom:1rem">
-      <div class="feedback-stat"><span>Fournisseur</span><span>${r.fournisseur||'—'}</span></div>
+      <div class="feedback-stat"><span>Fournisseur</span><span>${escapeHTML(r.fournisseur)||'—'}</span></div>
+      ${r.refFournisseur?`<div class="feedback-stat"><span>N° bon de commande</span><span class="feedback-val">${escapeHTML(r.refFournisseur)}</span></div>`:''}
       <div class="feedback-stat"><span>Adresse indiquée</span><span style="text-align:right;max-width:65%">${r.fournisseurAdresse||'—'} <button class="btn btn-ghost btn-sm" style="padding:2px 6px" onclick="editReceptionAdresse('${id}')" title="Corriger l'adresse">✏️</button></span></div>
       <div class="feedback-stat"><span>Téléphone</span><span>${r.fournisseurTelephone||'—'}</span></div>
       <div class="feedback-stat"><span>Email</span><span>${r.fournisseurEmail||'—'}</span></div>
