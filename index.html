@@ -264,11 +264,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <div class="form-grid">
         <div class="form-group">
           <label>Nom du client *</label>
-          <input type="text" id="f-client" placeholder="Nom ou société" required/>
+          <select id="f-client" onchange="onClientSelected()">
+            <option value="">— Choisir un client —</option>
+          </select>
         </div>
         <div class="form-group">
-          <label>Numéro de commande client</label>
-          <input type="text" id="f-ref-client" placeholder="ex : BC-2025-001"/>
+          <label>Numéro de bon de commande</label>
+          <div style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:.55rem .85rem;color:var(--dim);font-size:.85rem">
+            Généré automatiquement à l'envoi
+          </div>
         </div>
       </div>
       <div class="form-group">
@@ -535,27 +539,52 @@ if (useFirebase) {
   });
 }
 
-// 3. Récupération de la liste des fournisseurs (même source de référence que le WMS superviseur)
+// 3. Listes de référence clients / fournisseurs (même source que le WMS superviseur, en temps réel)
 let FOURNISSEURS = [];
+let CLIENTS = [];
+
+function escapeHTML(str){
+  return String(str ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[ch]));
+}
 
 function populateFournisseurSelect(){
   const sel = document.getElementById('f-fournisseur');
   if(!sel) return;
   const current = sel.value;
   sel.innerHTML = '<option value="">— Choisir un fournisseur —</option>'
-    + FOURNISSEURS.map(f => `<option value="${f.nom}">${f.nom}</option>`).join('');
+    + FOURNISSEURS.map(f => `<option value="${escapeHTML(f.nom)}">${escapeHTML(f.nom)}</option>`).join('');
   if(FOURNISSEURS.some(f => f.nom === current)) sel.value = current;
 }
 
+function populateClientSelect(){
+  const sel = document.getElementById('f-client');
+  if(!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Choisir un client —</option>'
+    + CLIENTS.map(c => `<option value="${escapeHTML(c.nom)}">${escapeHTML(c.nom)}</option>`).join('');
+  if(CLIENTS.some(c => c.nom === current)) sel.value = current;
+}
+
+// Sélection d'un client : l'adresse de livraison est pré-remplie (modifiable)
+window.onClientSelected = function(){
+  const nom = document.getElementById('f-client').value;
+  const client = CLIENTS.find(c => c.nom === nom);
+  document.getElementById('f-adresse').value = client ? (client.adresse || '') : '';
+};
+
 if (useFirebase) {
-  dbFirestore.collection('refdata').doc('listes').get().then(function(snap){
+  dbFirestore.collection('refdata').doc('listes').onSnapshot(function(snap){
     if(snap.exists){
       const data = snap.data();
       FOURNISSEURS = Array.isArray(data.fournisseurs) ? data.fournisseurs : [];
+      CLIENTS = Array.isArray(data.clients) ? data.clients : [];
       populateFournisseurSelect();
+      populateClientSelect();
     }
-  }).catch(function(error){
-    console.error("Erreur de lecture des fournisseurs :", error);
+  }, function(error){
+    console.error("Erreur de lecture des listes de référence :", error);
   });
 }
 
@@ -573,12 +602,12 @@ let orderType = 'client'; // 'client' (sort du stock) | 'reappro' (entre en stoc
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6).toUpperCase(); }
 function fmtEur(v){ const n=parseFloat(v); return isNaN(n)?'—':n.toFixed(2).replace('.',',')+' €'; }
 
-// Génère un numéro de bon de commande fournisseur séquentiel (BC-F-00001, BC-F-00002, …)
-// Partagé avec le WMS superviseur via un compteur Firestore (transaction atomique).
-async function genBonCommandeFournisseur(){
+// Génère un numéro séquentiel (ex. BC-F-00001, BC-F-00002, …) à partir d'un compteur Firestore
+// partagé avec le WMS superviseur (transaction atomique : pas de doublon, pas de trou).
+async function genNumeroSequentiel(compteurId, prefixe, cleLocale){
   if(useFirebase){
     try{
-      const compteurRef = dbFirestore.collection('compteurs').doc('bonCommandeFournisseur');
+      const compteurRef = dbFirestore.collection('compteurs').doc(compteurId);
       const next = await dbFirestore.runTransaction(async (tx) => {
         const snap = await tx.get(compteurRef);
         const current = snap.exists ? Number(snap.data().valeur || 0) : 0;
@@ -586,17 +615,19 @@ async function genBonCommandeFournisseur(){
         tx.set(compteurRef, { valeur: nv });
         return nv;
       });
-      return 'BC-F-' + String(next).padStart(5, '0');
+      return prefixe + String(next).padStart(5, '0');
     } catch(e) {
       console.error('Erreur génération du numéro de bon de commande :', e);
     }
   }
   // Fallback local (hors Firebase ou en cas d'erreur réseau)
-  const current = Number(localStorage.getItem('wms_bon_commande_fournisseur_compteur') || '0');
+  const current = Number(localStorage.getItem(cleLocale) || '0');
   const next = current + 1;
-  localStorage.setItem('wms_bon_commande_fournisseur_compteur', String(next));
-  return 'BC-F-' + String(next).padStart(5, '0');
+  localStorage.setItem(cleLocale, String(next));
+  return prefixe + String(next).padStart(5, '0');
 }
+function genBonCommandeFournisseur(){ return genNumeroSequentiel('bonCommandeFournisseur','BC-F-','wms_bon_commande_fournisseur_compteur'); }
+function genBonCommandeClient(){ return genNumeroSequentiel('bonCommandeClient','BC-C-','wms_bon_commande_client_compteur'); }
 
 function showToast(msg, type='info', dur=3500){
   const c=document.getElementById('toast-container');
@@ -806,7 +837,7 @@ function buildRecap(){
     const fournisseur=document.getElementById('f-fournisseur').value;
     document.getElementById('recap-infos').innerHTML=`
       <div style="display:grid;gap:.5rem">
-        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Fournisseur</span><span>${fournisseur}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Fournisseur</span><span>${escapeHTML(fournisseur)}</span></div>
         <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">N° bon de commande</span><span style="color:var(--dim);font-style:italic">Généré à l'envoi</span></div>
         <div style="display:flex;justify-content:space-between;padding:.4rem 0"><span style="color:var(--dim)">Type</span><span style="color:var(--accent2);font-weight:700">🔄 Réapprovisionnement stock</span></div>
       </div>`;
@@ -816,8 +847,9 @@ function buildRecap(){
     const adresse=document.getElementById('f-adresse').value;
     document.getElementById('recap-infos').innerHTML=`
       <div style="display:grid;gap:.5rem">
-        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Client</span><span>${client}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Adresse</span><span style="text-align:right;max-width:60%">${adresse}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Client</span><span>${escapeHTML(client)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Adresse</span><span style="text-align:right;max-width:60%">${escapeHTML(adresse)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">N° bon de commande</span><span style="color:var(--dim);font-style:italic">Généré à l'envoi</span></div>
         <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--dim)">Mode</span><span style="color:${selectedMode==='Urgent'?'var(--red)':selectedMode==='Express'?'var(--yellow)':'var(--text)'};font-weight:700">${selectedMode==='Urgent'?'🚨':''}${selectedMode}</span></div>
         <div style="display:flex;justify-content:space-between;padding:.4rem 0"><span style="color:var(--dim)">Tracking</span><span style="font-family:var(--font-mono);color:var(--accent)">${currentTracking}</span></div>
       </div>`;
@@ -840,7 +872,7 @@ window.openConfirmModal=function(){
     document.getElementById('modal-confirm-recap').innerHTML=`
       <div class="recap-box" style="margin-bottom:0">
         <div style="display:grid;gap:.4rem">
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Fournisseur</span><strong>${fournisseur}</strong></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Fournisseur</span><strong>${escapeHTML(fournisseur)}</strong></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Articles</span><strong>${count} unité(s)</strong></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Type</span><strong style="color:var(--accent2)">🔄 Réapprovisionnement</strong></div>
         </div>
@@ -850,7 +882,7 @@ window.openConfirmModal=function(){
     document.getElementById('modal-confirm-recap').innerHTML=`
       <div class="recap-box" style="margin-bottom:0">
         <div style="display:grid;gap:.4rem">
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Client</span><strong>${client}</strong></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Client</span><strong>${escapeHTML(client)}</strong></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Articles</span><strong>${count} article(s)</strong></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Mode</span><strong style="color:${selectedMode==='Urgent'?'var(--red)':'inherit'}">${selectedMode}</strong></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Tracking</span><strong style="font-family:var(--font-mono);color:var(--accent)">${currentTracking}</strong></div>
@@ -902,8 +934,10 @@ window.sendOrder=async function(){
 
   // ── Commande client classique : fait sortir du stock à l'expédition ──
   const client=document.getElementById('f-client').value;
+  const refClient = await genBonCommandeClient();
   const cmd={
     ref:'CMD-'+uid(),
+    refClient,
     client,
     adresse:document.getElementById('f-adresse').value,
     email:document.getElementById('f-email').value,
@@ -975,7 +1009,8 @@ function showSuccessScreen(order){
     <div class="recap-box" style="margin-bottom:0;margin-top:1rem">
       <h4>Récapitulatif</h4>
       <div style="display:grid;gap:.4rem;font-size:.83rem">
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Client</span><span>${order.client}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Client</span><span>${escapeHTML(order.client)}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">N° bon de commande</span><span style="font-family:var(--font-mono);color:var(--accent2)">${order.refClient||'—'}</span></div>
         <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Articles</span><span>${items.length} référence(s) — ${fmtEur(total)}</span></div>
         <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Mode</span><span>${order.mode}</span></div>
         <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Réf. WMS</span><span style="font-family:var(--font-mono);color:var(--accent2)">${order.ref}</span></div>
