@@ -553,7 +553,7 @@ function populateFournisseurSelect(){
   const sel = document.getElementById('f-fournisseur');
   if(!sel) return;
   const current = sel.value;
-  sel.innerHTML = '<option value="">— Choisir un fournisseur —</option>'
+  sel.innerHTML = `<option value="">${FOURNISSEURS.length ? '— Choisir un fournisseur —' : '— Aucun fournisseur disponible —'}</option>`
     + FOURNISSEURS.map(f => `<option value="${escapeHTML(f.nom)}">${escapeHTML(f.nom)}</option>`).join('');
   if(FOURNISSEURS.some(f => f.nom === current)) sel.value = current;
 }
@@ -562,7 +562,7 @@ function populateClientSelect(){
   const sel = document.getElementById('f-client');
   if(!sel) return;
   const current = sel.value;
-  sel.innerHTML = '<option value="">— Choisir un client —</option>'
+  sel.innerHTML = `<option value="">${CLIENTS.length ? '— Choisir un client —' : '— Aucun client disponible —'}</option>`
     + CLIENTS.map(c => `<option value="${escapeHTML(c.nom)}">${escapeHTML(c.nom)}</option>`).join('');
   if(CLIENTS.some(c => c.nom === current)) sel.value = current;
 }
@@ -580,12 +580,20 @@ if (useFirebase) {
       const data = snap.data();
       FOURNISSEURS = Array.isArray(data.fournisseurs) ? data.fournisseurs : [];
       CLIENTS = Array.isArray(data.clients) ? data.clients : [];
-      populateFournisseurSelect();
-      populateClientSelect();
+    } else {
+      FOURNISSEURS = [];
+      CLIENTS = [];
     }
+    populateFournisseurSelect();
+    populateClientSelect();
   }, function(error){
     console.error("Erreur de lecture des listes de référence :", error);
+    populateFournisseurSelect();
+    populateClientSelect();
   });
+} else {
+  populateFournisseurSelect();
+  populateClientSelect();
 }
 
 // ══ State ══
@@ -787,10 +795,16 @@ window.goStep=function(n){
 // ══ Infos validation ══
 function validateInfosCheck(){
   if(orderType==='reappro'){
-    if(!document.getElementById('f-fournisseur').value.trim()){ showToast('Renseignez le nom du fournisseur','warn'); return false; }
+    if(!document.getElementById('f-fournisseur').value.trim()){
+      showToast(FOURNISSEURS.length ? 'Renseignez le nom du fournisseur' : 'Aucun fournisseur disponible : ouvrez d\'abord le WMS superviseur pour initialiser les listes','warn');
+      return false;
+    }
     return true;
   }
-  if(!document.getElementById('f-client').value.trim()){ showToast('Renseignez le nom du client','warn'); return false; }
+  if(!document.getElementById('f-client').value.trim()){
+    showToast(CLIENTS.length ? 'Renseignez le nom du client' : 'Aucun client disponible : ouvrez d\'abord le WMS superviseur pour initialiser les listes','warn');
+    return false;
+  }
   if(!document.getElementById('f-adresse').value.trim()){ showToast('Renseignez l\'adresse de livraison','warn'); return false; }
   return true;
 }
