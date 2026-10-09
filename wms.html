@@ -1059,13 +1059,27 @@ async function adjustStockForOrder(cmd){
 }
 
 // Augmente le stock pour chaque article d'une réception (au moment de la validation)
+// Répartit la quantité à faire entrer en stock pour une réception.
+// Seuls les articles MANQUANTS sont déduits ; les articles endommagés comptent dans le stock.
+function repartitionStockReception(rec){
+  const items = Array.isArray(rec?.articlesDetail) ? rec.articlesDetail : [];
+  let manquant = (rec?.motifNC?.type==='manque') ? Number(rec.motifNC.x||0) : 0;
+  const lignes = [];
+  let total = 0;
+  for(const a of items){
+    let qte = Number(a.qte ?? 0);
+    const retire = Math.min(manquant, qte);
+    manquant -= retire;
+    qte -= retire;
+    if(qte > 0 && a.id){ lignes.push({id:a.id, qte}); total += qte; }
+  }
+  return { lignes, total };
+}
+
 async function adjustStockForReception(rec){
   if(!rec) return;
-  const items = Array.isArray(rec.articlesDetail) ? rec.articlesDetail : [];
-  for(const a of items){
-    const qte = Number(a.qte ?? 0);
-    if(qte > 0 && a.id) await adjustStock(a.id, qte);
-  }
+  const { lignes } = repartitionStockReception(rec);
+  for(const l of lignes) await adjustStock(l.id, l.qte);
 }
 
 // Remet le stock de tous les articles à 0 (action manuelle, irréversible)
@@ -2007,6 +2021,7 @@ window.viewReception=function(id){
       <div class="feedback-stat"><span>Email</span><span>${r.fournisseurEmail||'—'}</span></div>
       ${refFournisseur?`<div class="feedback-stat"><span>Conformité adresse</span><span style="color:${adresseMatch?'var(--green)':'var(--red)'}">${adresseMatch?'✅ Correspond à la fiche fournisseur':'⚠️ Ne correspond pas à la fiche fournisseur'}</span></div>`:''}
       ${r.motifNC?`<div class="feedback-stat"><span>Motif de non-conformité</span><span style="color:var(--red)">${r.motifNC.label}</span></div>`:''}
+      ${typeof r.qteRecue==='number'?`<div class="feedback-stat"><span>Quantité entrée en stock</span><span class="feedback-val">${r.qteRecue} / ${r.qteAttendue}</span></div>`:''}
     </div>
     ${r.fournisseurReponse?`<div class="feedback-box" style="margin-bottom:1rem"><h4 style="margin-bottom:.5rem">📞 Dernière réponse du fournisseur</h4><p style="line-height:1.5">${r.fournisseurReponse}</p></div>`:''}
     <table class="recap-table"><thead><tr><th>Article</th><th>Réf.</th><th>Qté</th></tr></thead>
@@ -2028,6 +2043,13 @@ window.actionReception=async function(id,action){
   const rec=allReceptions.find(r=>r.id===id);
   const updateData={status:statusMap[action],action};
 
+  // Réception acceptée avec réserve : on mémorise la quantité réellement entrée en stock
+  let repartition=null;
+  if(action==='reserve' && rec){
+    repartition = repartitionStockReception(rec);
+    updateData.qteRecue = repartition.total;
+  }
+
   let reponse=null;
   let dejaContacte=false;
   if(action==='contact'){
@@ -2045,8 +2067,9 @@ window.actionReception=async function(id,action){
 
   await updateReception(id,updateData);
   if(action==='reserve' && rec) await adjustStockForReception(rec);
-  await addHistorique({type:'reception',ref:id,icon:'🚚',color:'var(--yellow)',msg:`Réception — ${labels[action]}${dejaContacte?' (réponse déjà obtenue, rappel)':''}`});
-  showToast(dejaContacte?'Vous avez déjà contacté ce fournisseur — voici sa réponse':labels[action],'warn'); loadData();
+  const detailStock = repartition ? ` (+${repartition.total} en stock sur ${rec.qteAttendue} attendus)` : '';
+  await addHistorique({type:'reception',ref:id,icon:'🚚',color:'var(--yellow)',msg:`Réception — ${labels[action]}${detailStock}${dejaContacte?' (réponse déjà obtenue, rappel)':''}`});
+  showToast(dejaContacte?'Vous avez déjà contacté ce fournisseur — voici sa réponse':labels[action]+detailStock,'warn'); loadData();
 
   if(action==='contact' && rec){
     document.getElementById('modal-fournisseur-reponse-body').innerHTML=`
